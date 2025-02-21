@@ -1,4 +1,11 @@
-import { ModelRenderer } from "./builtin/model-renderer";
+import {
+  bool,
+  date,
+  ModelRenderer,
+  nested,
+  nestedArray,
+  str,
+} from "./builtin/model-renderer";
 import {
   computedValue,
   defaultValue,
@@ -17,33 +24,17 @@ import {
   api,
 } from "./shortcuts/attributes";
 import { field, feature, model, mod, seed } from "./shortcuts/entities";
-import { nestedArray, nested, str, bool } from "./shortcuts/fields";
 
-const createdAt = str("createdAt").attributes([
+const createdAt = date("createdAt").attributes([
   required(),
   defaultValue(() => new Date()),
 ]);
-const updatedAt = str("updatedAt").attributes([
+const updatedAt = date("updatedAt").attributes([
   computedValue(() => new Date()),
+  required(false),
 ]);
 const timestamp = model("timestamp").fields([createdAt, updatedAt]);
 const isOnline = bool("is-online").attributes([defaultValue(() => false)]);
-
-const account = model("user")
-  .extends(timestamp)
-  .fields([
-    str("username", [
-      required(),
-      notEmpty(),
-      min(3),
-      max(20),
-      unique(),
-      index(),
-      trim(),
-      lowercase(),
-    ]),
-    str("password", [required(), notEmpty(), min(8), trim()]),
-  ]);
 
 const vehicle = model("vehicle")
   .extends(timestamp)
@@ -58,6 +49,28 @@ const vehicle = model("vehicle")
     ]),
   ]);
 
+const healthCheckResponse = model("health-check-response").fields([
+  str("status"),
+]);
+
+const account = model("account")
+  .fields([
+    str("username", [
+      required(),
+      notEmpty(),
+      min(3),
+      max(20),
+      unique(),
+      index(),
+      trim(),
+      lowercase(),
+    ]),
+    str("password", [required(), notEmpty(), min(8), trim()]),
+    nested("vehicle", vehicle),
+    nested("health", healthCheckResponse),
+  ])
+  .extends(timestamp);
+
 const driver = model("driver")
   .extends(account)
   .fields([nested("vehicle", vehicle)]);
@@ -69,15 +82,11 @@ const passenger = model("passenger")
 
 const token = model("token").fields([
   str("token", [required(), notEmpty(), trim()]),
-  str("refreshToken", [required(), notEmpty(), trim()]),
-]);
-
-const accountList = model("account-list").fields([
-  nestedArray("accounts", account),
+  str("refresh-token", [required(false), notEmpty(), trim()]),
 ]);
 
 const project = seed("project").modules([
-  mod("account-module")
+  mod("account")
     .attributes([httpPath("/account"), api("rest")])
     .features([
       feature("create-account")
@@ -94,14 +103,18 @@ const project = seed("project").modules([
         .output(token),
       feature("list-accounts")
         .attributes([httpPath("/")])
-        .output(accountList),
+        .output(
+          model("account-list-response").fields([
+            nestedArray("accounts", account),
+          ])
+        ),
     ]),
-  mod("public-module")
+  mod("public")
     .attributes([api("rest")])
     .features([
       feature("health-check")
         .attributes([httpPath("/health")])
-        .output(model("health-check-response").fields([str("status")])),
+        .output(healthCheckResponse),
     ]),
 ]);
 

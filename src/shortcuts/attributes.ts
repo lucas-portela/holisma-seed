@@ -1,19 +1,9 @@
 import { Model } from "../entities/model";
+import { attrInstantiator } from "../helpers/instantiators";
 import { attr } from "./entities";
 
-export const attrInstantiator =
-  <Type>(
-    name: string,
-    defaultWhenPresent?: Type,
-    defaultWhenNotPresent?: Type
-  ) =>
-  (value?: Type) =>
-    attr<Type>(name, value ?? defaultWhenPresent).default(
-      defaultWhenNotPresent
-    );
-
 // Validation
-export const required = attrInstantiator<boolean>("required", true, false);
+export const required = attrInstantiator<boolean>("required", true, true);
 export const min = attrInstantiator<number>("min", 0);
 export const max = attrInstantiator<number>("max", Number.MAX_SAFE_INTEGER);
 export const size = attrInstantiator<number>("length");

@@ -1,12 +1,18 @@
+import path from "path";
 import {
   RendererFileInput,
   RendererOutput,
   RendererSelection,
 } from "../types/renderer";
 import { Seed } from "./seed";
+import { cwd } from "process";
 
 export class Renderer {
-  constructor(public workingDir: string) {}
+  public workingDir: string;
+
+  constructor(workingDir?: string) {
+    this.workingDir = workingDir ?? "";
+  }
 
   async select(seed: Seed): Promise<RendererSelection> {
     return { modules: seed.$moduleList() };

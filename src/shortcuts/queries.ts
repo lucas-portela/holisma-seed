@@ -6,12 +6,15 @@ import { Module } from "../entities/module";
 import { Seed } from "../entities/seed";
 
 export const $attr = <Type>(
-  root: Module | Field | Feature,
+  root: Module | Feature | Model | Field,
   name: string | Attribute<Type>
 ) => {
+  const attribute = typeof name != "string" ? name : null;
   name = typeof name == "string" ? name : name.$name();
-  return (root.$attributeList().find((attr) => attr.$name() == name)?.$value ??
-    null) as Type | null;
+  return (root
+    .$attributeList()
+    .find((attr) => attr.$name() == name)
+    ?.$value() ?? (attribute ? attribute.$default() : null)) as Type | null;
 };
 
 export const $findModules = (

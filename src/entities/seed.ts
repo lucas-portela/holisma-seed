@@ -1,9 +1,9 @@
 import { cwd } from "process";
 import { RendererFileInput } from "../types/renderer";
-import { Model } from "./model";
 import { Module } from "./module";
 import { Renderer } from "./renderer";
 import fs from "fs";
+import path from "path";
 
 export class Seed {
   private _name: string;
@@ -41,20 +41,33 @@ export class Seed {
   async render(renderer: Renderer) {
     const selection = await renderer.select(this);
     const files: RendererFileInput = {};
-    Object.keys(selection.files ?? {}).forEach((key) => {
-      files[key] = "";
-    });
+
+    for (const fileName in selection.files) {
+      const filePath = path.join(
+        cwd(),
+        renderer.workingDir,
+        selection.files[fileName]
+      );
+      selection.files[fileName] = filePath;
+
+      const dir = path.dirname(filePath);
+
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+
+      if (!fs.existsSync(filePath)) files[fileName] = "";
+      else files[fileName] = fs.readFileSync(filePath, "utf-8");
+    }
+
     const result = await renderer.render(this, selection, {});
+
     for (const fileName in selection.files) {
       const content = result[fileName];
+      if (content === undefined) continue;
+
       const filePath = selection.files[fileName];
-      const dir =
-        cwd() +
-        "/" +
-        renderer.workingDir +
-        "/" +
-        filePath.split("/").slice(0, -1).join("/");
-      if (!content) continue;
+      const dir = path.dirname(filePath);
 
       if (!fs.existsSync(dir)) {
         fs.mkdirSync(dir, { recursive: true });

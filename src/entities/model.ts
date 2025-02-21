@@ -1,9 +1,12 @@
 import { model } from "../shortcuts/entities";
+import { Attribute } from "./attribute";
 import { Field } from "./field";
 
 export class Model {
   private _name: string;
   private _fields: Field[] = [];
+  private _attributes: Attribute<any>[] = [];
+
   constructor(name: string) {
     this._name = name;
   }
@@ -21,6 +24,23 @@ export class Model {
     return this._fields;
   }
 
+  $attribute<Type>(attribute: Attribute<Type>) {
+    const a = this._attributes.find(
+      (attr) => attr.$name() == attribute.$name()
+    );
+    return a ? a : attribute;
+  }
+
+  $attributeList() {
+    return this._attributes;
+  }
+
+  attributes(attributes: Attribute<any>[]) {
+    this.removeAttributes(attributes);
+    this._attributes = this._attributes.concat(attributes);
+    return this;
+  }
+
   name(name: string) {
     this._name = name;
     return this;
@@ -33,7 +53,7 @@ export class Model {
   }
 
   extends(model: Model) {
-    return this.fields(model.$fieldList());
+    return this.fields(model.$fieldList()).attributes(model.$attributeList());
   }
 
   remove(fields: Field[]) {
@@ -49,5 +69,12 @@ export class Model {
     );
 
     return model(name).fields(picked);
+  }
+
+  removeAttributes(attributes: Attribute<any>[]) {
+    this._attributes = this._attributes.filter(
+      (attribute) => !attributes.some((a) => a.$name() == attribute.$name())
+    );
+    return this;
   }
 }

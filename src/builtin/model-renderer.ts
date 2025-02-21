@@ -10,9 +10,21 @@ import {
 } from "../types/renderer";
 import Case from "case";
 import { closeCursor, writeToCursor } from "../utils/rendering";
-import { max, min, required } from "../shortcuts/attributes";
+import { max, min, ref, required } from "../shortcuts/attributes";
+import { attr, field } from "../shortcuts/entities";
+import { Attribute } from "../entities/attribute";
+import path from "path";
+import { attrInstantiator, fieldInstantiator } from "../helpers/instantiators";
 
 export class ModelRenderer extends Renderer {
+  constructor(
+    workingDir?: string,
+    private _modelDir: string = "src/models",
+    private _where?: (model: Model) => boolean
+  ) {
+    super(workingDir);
+  }
+
   async select(seed: Seed): Promise<RendererSelection> {
     const modules = seed.$moduleList();
     const files: RendererFileInput = {
@@ -21,25 +33,32 @@ export class ModelRenderer extends Renderer {
     const models: Model[] = [];
 
     modules.forEach((mod) => {
-      const foundModels: Model[] = [];
+      let foundModels: Model[] = [];
       mod.$featureList().forEach((feature) => {
-        const input = feature.$input();
-        const output = feature.$output();
-        if (
-          input &&
-          !foundModels.some((model) => model.$name() == input.$name())
-        )
-          foundModels.push(input);
-        if (
-          output &&
-          !foundModels.some((model) => model.$name() == output.$name())
-        )
-          foundModels.push(output);
+        const root: Model[] = [];
+        if (feature.$input()) root.push(feature.$input() as Model);
+        if (feature.$output()) root.push(feature.$output() as Model);
+
+        const deepSearch = (model: Model) => {
+          if (!foundModels.some((m) => m.$name() == model.$name())) {
+            foundModels.push(model);
+            model.$fieldList().forEach((field) => {
+              if (field.$type() == "nested") {
+                const nestedModel = $attr(field, ref());
+                if (nestedModel) deepSearch(nestedModel);
+              }
+            });
+          }
+        };
+        root.forEach(deepSearch);
       });
+
+      if (this._where) foundModels = foundModels.filter(this._where);
       foundModels.forEach((model) => {
-        files[model.$name() + "-model"] = `src/models/${Case.kebab(
-          mod.$name()
-        )}/${Case.snake(model.$name())}.ts`;
+        files[this._modelClassName(model)] = path.join(
+          this._modelDir,
+          `${Case.kebab(mod.$name())}/${this._modelFileName(model)}`
+        );
       });
       models.push(...foundModels);
     });
@@ -49,6 +68,38 @@ export class ModelRenderer extends Renderer {
       files,
       models,
     };
+  }
+
+  private _modelImport(
+    currentModel: Model,
+    model: Model,
+    selection: RendererSelection
+  ): string {
+    if (!selection.files) return "";
+    const currentModelFilePath =
+      selection.files[this._modelClassName(currentModel)];
+    const modelFilePath = selection.files[this._modelClassName(model)];
+    const sameModule =
+      path.dirname(currentModelFilePath) == path.dirname(modelFilePath);
+
+    if (sameModule)
+      return `import { ${this._modelClassName(
+        model
+      )} } from "./${this._modelFileName(model)}";\n`;
+    else
+      return `import { ${this._modelClassName(
+        model
+      )} } from "../${path.basename(
+        path.dirname(modelFilePath)
+      )}/${this._modelFileName(model)}";\n`;
+  }
+
+  private _modelClassName(model: Model) {
+    return Case.pascal(model.$name());
+  }
+
+  private _modelFileName(model: Model) {
+    return `${Case.kebab(model.$name())}.ts`;
   }
 
   async render(
@@ -66,33 +117,56 @@ export class ModelRenderer extends Renderer {
     const renderedFiles: RendererOutput = {};
 
     selection.models?.forEach((model) => {
-      const fieldCursor = "#field-cursor";
+      const fieldCursor = "#field-cursor\n";
+      const importCursor = "#import-cursor\n";
 
-      let content = `export class ${Case.pascal(
-        model.$name()
-      )} {\n${fieldCursor}\n}`;
+      let content = `#import-cursor\nexport class ${this._modelClassName(
+        model
+      )} {\n${fieldCursor}}`;
 
       const fields = model.$fieldList();
+      const importedModels: string[] = [];
       fields.forEach((field) => {
-        if (field.$type() == "nested")
+        if (["nested", "nested-array"].includes(field.$type() as any)) {
+          const nestedModel = $attr(field, ref());
+
+          if (nestedModel) {
+            content = writeToCursor(
+              fieldCursor,
+              `  ${Case.camel(field.$name())}${
+                !$attr(field, required()) ? "?" : ""
+              }: ${this._modelClassName(nestedModel)}${
+                field.$type() == "nested-array" ? "[]" : ""
+              };\n`,
+              content
+            );
+
+            if (!importedModels.includes(this._modelClassName(nestedModel))) {
+              content = writeToCursor(
+                importCursor,
+                this._modelImport(model, nestedModel, selection),
+                content
+              );
+              importedModels.push(this._modelClassName(nestedModel));
+            }
+          }
+        } else {
+          let type = field.$type();
+          if (type === "date") type = "Date";
           content = writeToCursor(
             fieldCursor,
-            `\t${Case.camel(field.$name())}${
+            `  ${Case.camel(field.$name())}${
               !$attr(field, required()) ? "?" : ""
-            }: ${field.$type()};\n`,
+            }: ${type};\n`,
             content
           );
-        else
-          content = writeToCursor(
-            fieldCursor,
-            `\t${Case.camel(field.$name())}${
-              !$attr(field, required()) ? "?" : ""
-            }: ${field.$type()};\n`,
-            content
-          );
+        }
       });
+      if (importedModels.length > 0)
+        content = writeToCursor(importCursor, "\n", content);
       content = closeCursor(fieldCursor, content);
-      renderedFiles[model.$name() + "-model"] = content;
+      content = closeCursor(importCursor, content);
+      renderedFiles[this._modelClassName(model)] = content;
     });
 
     return {
@@ -101,3 +175,19 @@ export class ModelRenderer extends Renderer {
     };
   }
 }
+
+// Fields
+export const str = fieldInstantiator("string");
+export const num = fieldInstantiator("number");
+export const bool = fieldInstantiator("boolean");
+export const date = fieldInstantiator("date");
+export const nested = (
+  name: string,
+  nested: Model,
+  attributes: Attribute<any>[] = []
+) => field(name, "nested").attributes([ref(nested), ...attributes]);
+export const nestedArray = (
+  name: string,
+  nested: Model,
+  attributes: Attribute<any>[] = []
+) => field(name, "nested-array").attributes([ref(nested), ...attributes]);

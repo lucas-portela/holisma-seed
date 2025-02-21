@@ -16,6 +16,10 @@ export class Attribute<Type> {
     return this._value ?? this._defaultValue;
   }
 
+  $default() {
+    return this._defaultValue;
+  }
+
   default(value?: Type) {
     this._defaultValue = value;
     return this;
