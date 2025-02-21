@@ -2,6 +2,9 @@
   "name": "holisma-seed",
   "version": "1.0.0",
   "license": "MIT",
+  "scripts": {
+    "cli": "nodemon src/index.ts"
+  },
   "dependencies": {
     "case": "^1.6.3"
   },
