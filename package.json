@@ -1,0 +1,11 @@
+{
+  "name": "holisma-seed",
+  "version": "1.0.0",
+  "license": "MIT",
+  "dependencies": {
+    "case": "^1.6.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.13.4"
+  }
+}
