@@ -6,7 +6,8 @@
     "cli": "nodemon --watch src src/index.ts"
   },
   "dependencies": {
-    "case": "^1.6.3"
+    "case": "^1.6.3",
+    "class-validator": "^0.14.1"
   },
   "devDependencies": {
     "@types/node": "^22.13.4"

@@ -8,6 +8,7 @@ import path from "path";
 export class Seed {
   private _name: string;
   private _modules: Module[] = [];
+  private _workingDir?: string;
 
   constructor(name: string) {
     this._name = name;
@@ -19,6 +20,10 @@ export class Seed {
 
   $moduleList() {
     return this._modules;
+  }
+
+  $workingDir() {
+    return this._workingDir ?? "";
   }
 
   extends(seed: Seed) {
@@ -38,16 +43,19 @@ export class Seed {
     return this;
   }
 
+  workingDir(workingDir: string) {
+    this._workingDir = workingDir;
+    return this;
+  }
+
   async render(renderer: Renderer) {
     const selection = await renderer.select(this);
     const files: RendererFileInput = {};
 
     for (const fileName in selection.files) {
-      const filePath = path.join(
-        cwd(),
-        renderer.workingDir,
-        selection.files[fileName]
-      );
+      const filePath = selection.files[fileName].startsWith("/")
+        ? selection.files[fileName]
+        : path.join(cwd(), this.$workingDir(), selection.files[fileName]);
       selection.files[fileName] = filePath;
 
       const dir = path.dirname(filePath);
@@ -60,7 +68,7 @@ export class Seed {
       else files[fileName] = fs.readFileSync(filePath, "utf-8");
     }
 
-    const result = await renderer.render(this, selection, {});
+    const result = await renderer.render(this, selection, files);
 
     for (const fileName in selection.files) {
       const content = result[fileName];
@@ -75,5 +83,7 @@ export class Seed {
 
       fs.writeFileSync(filePath, content, "utf-8");
     }
+
+    return selection.files ?? {};
   }
 }

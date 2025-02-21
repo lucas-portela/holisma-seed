@@ -1,29 +1,27 @@
-import {
-  bool,
-  date,
-  ModelRenderer,
-  nested,
-  nestedArray,
-  str,
-} from "./builtin/model-renderer";
+import { ModelRenderer } from "./builtin/model-renderer";
+import { ModelValidatorRenderer } from "./builtin/model-validator-renderer";
 import {
   computedValue,
   defaultValue,
-  size,
-  max,
-  min,
-  notEmpty,
-  required,
   unique,
-  matches,
   index,
   trim,
   lowercase,
   httpPath,
   httpMethod,
   api,
+  matches,
+  max,
+  min,
+  notEmpty,
+  required,
+  size,
+  minLength,
+  maxLength,
+  isArray,
 } from "./shortcuts/attributes";
 import { field, feature, model, mod, seed } from "./shortcuts/entities";
+import { date, bool, str, nested, num } from "./shortcuts/fields";
 
 const createdAt = date("createdAt").attributes([
   required(),
@@ -49,17 +47,18 @@ const vehicle = model("vehicle")
     ]),
   ]);
 
-const healthCheckResponse = model("health-check-response").fields([
+const healthCheckResponse = model("health-check-response-dto").fields([
   str("status"),
 ]);
 
 const account = model("account")
   .fields([
+    num("age", [min(18), max(100)]),
     str("username", [
       required(),
       notEmpty(),
-      min(3),
-      max(20),
+      minLength(3),
+      maxLength(20),
       unique(),
       index(),
       trim(),
@@ -78,9 +77,9 @@ const driver = model("driver")
 const passenger = model("passenger")
   .extends(account)
   .remove([isOnline])
-  .fields([nestedArray("drivers", driver)]);
+  .fields([nested("drivers", driver).attributes([isArray()])]);
 
-const token = model("token").fields([
+const token = model("token-dto").fields([
   str("token", [required(), notEmpty(), trim()]),
   str("refresh-token", [required(false), notEmpty(), trim()]),
 ]);
@@ -92,9 +91,10 @@ const project = seed("project").modules([
       feature("create-account")
         .attributes([httpPath("/"), httpMethod("post")])
         .input(
-          account.pick("create-account-request", [
-            account.$field(field("username")),
-            account.$field(field("password")),
+          account.pick("create-account-request-dto", [
+            field("age"),
+            field("username"),
+            field("password"),
           ])
         )
         .output(account),
@@ -104,8 +104,8 @@ const project = seed("project").modules([
       feature("list-accounts")
         .attributes([httpPath("/")])
         .output(
-          model("account-list-response").fields([
-            nestedArray("accounts", account),
+          model("account-list-response-dto").fields([
+            nested("accounts", account).attributes([isArray()]),
           ])
         ),
     ]),
@@ -119,6 +119,10 @@ const project = seed("project").modules([
 ]);
 
 (async () => {
-  const render = await project.render(new ModelRenderer("projects/server/"));
-  console.log(render);
+  project.workingDir("projects/server/");
+  const modelFiles = await project.render(new ModelRenderer());
+  const validatorFiles = await project.render(
+    new ModelValidatorRenderer({ modelFiles })
+  );
+  console.log(modelFiles, validatorFiles);
 })();

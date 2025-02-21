@@ -6,8 +6,15 @@ import { attr } from "./entities";
 export const required = attrInstantiator<boolean>("required", true, true);
 export const min = attrInstantiator<number>("min", 0);
 export const max = attrInstantiator<number>("max", Number.MAX_SAFE_INTEGER);
+export const minLength = attrInstantiator<number>("min-length", 0);
+export const maxLength = attrInstantiator<number>(
+  "max-length",
+  Number.MAX_SAFE_INTEGER
+);
 export const size = attrInstantiator<number>("length");
 export const notEmpty = attrInstantiator<boolean>("notEmpty", true, false);
+export const notInArray = attrInstantiator<any[]>("not-in");
+export const inArray = attrInstantiator<any[]>("in");
 export const matches = attrInstantiator<RegExp>("regex");
 
 // Sanitization
@@ -31,6 +38,7 @@ export const httpMethod = attrInstantiator<
 export const urlParam = attrInstantiator<Model>("param");
 
 // General
+export const isArray = attrInstantiator<boolean>("array", true, false);
 export const ref = attrInstantiator<Model>("ref");
 export const defaultValue = <Type>(valueFn?: () => Type) =>
   attr<string>("default-value", valueFn?.toString());
