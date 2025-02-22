@@ -1,185 +1,170 @@
 import { Model } from "../entities/model";
 import { Renderer } from "../entities/renderer";
-import { Seed } from "../entities/seed";
 import { $attr } from "../shortcuts/queries";
-import {
-  RendererFileInput,
-  RendererOutput,
-  RendererSelection,
-} from "../types/renderer";
+import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
 import Case from "case";
 import { closeCursor, writeToCursor } from "../utils/rendering";
-import { isArray, ref, required } from "../shortcuts/attributes";
-import { field } from "../shortcuts/entities";
+import { isArray, ref } from "../shortcuts/attributes";
 import { Attribute } from "../entities/attribute";
 import path from "path";
-import { fieldInstantiator } from "../helpers/instantiators";
 import { Module } from "../entities/module";
 import { Field } from "../entities/field";
 
 export class ModelRenderer extends Renderer {
   private _modelDir = "src/models";
   private _dtoDir = "src/dto";
+  private _includeModuleInDir = true;
   private _where?: (module: Module, model: Model) => boolean;
 
   constructor(options?: {
     modelDir?: string;
     dtoDir?: string;
+    includeModuleInDir?: boolean;
     where?: (module: Module, model: Model) => boolean;
   }) {
     super();
     if (options?.modelDir) this._modelDir = options.modelDir;
     if (options?.dtoDir) this._dtoDir = options.dtoDir;
+    if (options?.includeModuleInDir)
+      this._includeModuleInDir = options.includeModuleInDir;
     if (options?.where) this._where = options.where;
   }
 
-  private _isDtoModel(model: Model) {
-    return !!model.$name().match(/dto$/i);
-  }
+  $resolveImport(from: string, model: Model): string {
+    if (!this.$selection().paths) return "";
+    const modelPath = this.$path(this.$className(model));
+    if (!modelPath) return "";
 
-  private _modelImport(
-    currentModel: Model,
-    model: Model,
-    selection: RendererSelection
-  ): string {
-    if (!selection.files) return "";
-    const currentModelFilePath = selection.files[
-      ModelRenderer.modelClassName(currentModel)
-    ]
-      .split("/")
-      .slice(-3)
-      .join("/");
-    const modelFilePath = selection.files[ModelRenderer.modelClassName(model)]
-      .split("/")
-      .slice(-3)
-      .join("/");
+    const fromParts = from.split("/").slice(0, -1);
+    const toParts = modelPath.path.split("/").slice(0, -1);
+    for (let i = 0; i < fromParts.length; i++) {
+      if (fromParts.slice(0, i).join("/") !== toParts.slice(0, i).join("/")) {
+        let returns = "";
+        for (let j = 0; j <= fromParts.length - i; j++) returns += "../";
 
-    const currentModelIsDto = this._isDtoModel(currentModel);
-    const modelIsDto = this._isDtoModel(model);
-
-    const sameTypeOfModel = currentModelIsDto == modelIsDto;
-    const sameModule =
-      sameTypeOfModel &&
-      path.dirname(currentModelFilePath) == path.dirname(modelFilePath);
-
-    const fileName = ModelRenderer.modelFileName(model).replace(".ts", "");
-
-    if (sameModule)
-      return `import { ${ModelRenderer.modelClassName(
-        model
-      )} } from "./${fileName}";\n`;
-    else {
-      if (sameTypeOfModel)
-        return `import { ${ModelRenderer.modelClassName(model)} } from "../${
-          modelFilePath.split("/")[1]
-        }/${fileName}";\n`;
-      else
-        return `import { ${ModelRenderer.modelClassName(
-          model
-        )} } from "../../${modelFilePath
-          .split("/")
-          .slice(0, 2)
-          .join("/")}/${fileName}";\n`;
+        return `import { ${this.$className(model)} } from "${returns}${toParts
+          .slice(i - 1)
+          .join("/")}/${this.$fileName(model, false)}";\n`;
+      }
     }
+    return `import { ${this.$className(model)} } from "./${this.$fileName(
+      model,
+      false
+    )}";\n`;
   }
 
-  static modelClassName(model: Model) {
+  $key(model: Model) {
+    return this.$className(model);
+  }
+
+  $className(model: Model) {
     return Case.pascal(model.$name());
   }
 
-  static modelFileName(model: Model) {
-    return `${Case.kebab(model.$name())}.ts`;
+  $fileName(model: Model, extension = true) {
+    return `${Case.kebab(model.$name())}${extension ? ".ts" : ""}`;
   }
 
-  static fieldName(field: Field) {
+  $fieldName(field: Field) {
     return Case.camel(field.$name());
   }
 
-  static fieldType(field: Field) {
+  $fieldType(field: Field) {
     let type = field.$type();
     if (type === "date") type = "Date";
     else if (["interger", "float"].includes(type + "")) type = "number";
     return type;
   }
 
-  static fieldSignature(field: Field) {
-    let type = ModelRenderer.fieldType(field);
+  $fieldSignature(field: Field) {
+    let type = this.$fieldType(field);
     if (type === "nested") {
       const nestedModel = $attr(field, ref());
-      if (nestedModel) type = ModelRenderer.modelClassName(nestedModel);
+      if (nestedModel) type = this.$className(nestedModel);
     }
-    return `  ${ModelRenderer.fieldName(field)}: ${type}${
+    return `${this.$fieldName(field)}: ${type}${
       $attr(field, isArray()) ? "[]" : ""
-    };\n`;
+    }`;
   }
 
-  async select(seed: Seed): Promise<RendererSelection> {
-    const modules = seed.$moduleList();
-    const files: RendererFileInput = {};
-    const modelsWithModules = this.findModels(seed, this._where);
+  async select(): Promise<RenderSelection> {
+    const modules = this.$seed().$moduleList();
+    const models = this.$models(this._where);
+    const paths: RenderPath[] = [];
 
-    modelsWithModules.forEach(({ model, module }) => {
-      const isDto = this._isDtoModel(model);
-      files[ModelRenderer.modelClassName(model)] = path.join(
-        isDto ? this._dtoDir : this._modelDir,
-        `${Case.kebab(module.$name())}/${ModelRenderer.modelFileName(model)}`
-      );
+    models.forEach(({ model, module }) => {
+      if (paths.some((p) => p.key === this.$key(model))) return;
+
+      const isDto = !!model.$name().match(/dto$/i);
+      paths.push({
+        key: this.$key(model),
+        meta: { isDto },
+        path: path.join(
+          isDto ? this._dtoDir : this._modelDir,
+          this._includeModuleInDir ? Case.kebab(module.$name()) : "",
+          this.$fileName(model)
+        ),
+      });
     });
 
     return {
       modules,
-      files,
-      models: modelsWithModules.map(({ model }) => model),
+      paths,
+      models: models.map(({ model }) => model),
     };
   }
 
-  async render(
-    seed: Seed,
-    selection: RendererSelection,
-    files: RendererFileInput
-  ): Promise<RendererOutput> {
-    const renderedFiles: RendererOutput = {};
+  async render(): Promise<RenderContent[]> {
+    const output: RenderContent[] = [];
+    const models = this.$selection().models || [];
 
-    selection.models?.forEach((model) => {
+    models.forEach((model) => {
+      const modelKey = this.$key(model);
+      const modelPath = this.$path(modelKey);
+
       const fieldCursor = "#field-cursor\n";
       const importCursor = "#import-cursor\n";
 
-      let content = `#import-cursor\nexport class ${ModelRenderer.modelClassName(
+      const fields = model.$fieldList();
+      const importedModels: string[] = [];
+
+      let content = `#import-cursor\nexport class ${this.$className(
         model
       )} {\n${fieldCursor}}`;
 
-      const fields = model.$fieldList();
-      const importedModels: string[] = [];
       fields.forEach((field) => {
-        const fieldSignature = ModelRenderer.fieldSignature(field);
+        const fieldSignature = this.$fieldSignature(field);
 
         if (field.$type() == "nested") {
           const nestedModel = $attr(field, ref());
           if (nestedModel) {
-            if (
-              !importedModels.includes(
-                ModelRenderer.modelClassName(nestedModel)
-              )
-            ) {
+            if (!importedModels.includes(this.$className(nestedModel))) {
               content = writeToCursor(
                 importCursor,
-                this._modelImport(model, nestedModel, selection),
+                this.$resolveImport(modelPath?.path ?? "", nestedModel),
                 content
               );
-              importedModels.push(ModelRenderer.modelClassName(nestedModel));
+              importedModels.push(this.$className(nestedModel));
             }
           }
         }
 
-        content = writeToCursor(fieldCursor, fieldSignature, content);
+        content = writeToCursor(fieldCursor, `  ${fieldSignature};\n`, content);
       });
+
       if (importedModels.length > 0)
         content = writeToCursor(importCursor, "\n", content);
+
       content = closeCursor(fieldCursor, content);
       content = closeCursor(importCursor, content);
-      renderedFiles[ModelRenderer.modelClassName(model)] = content;
+
+      output.push({
+        key: modelKey,
+        content,
+        meta: modelPath?.meta ?? {},
+      });
     });
 
-    return renderedFiles;
+    return output;
   }
 }

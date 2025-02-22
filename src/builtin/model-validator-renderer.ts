@@ -1,20 +1,9 @@
 import { Model } from "../entities/model";
 import { Renderer } from "../entities/renderer";
-import { Seed } from "../entities/seed";
 import { addPackgeJsonDependency } from "../helpers/json";
-import { $attr, $findModules } from "../shortcuts/queries";
-import {
-  RendererFileInput,
-  RendererOutput,
-  RendererSelectedFiles,
-  RendererSelection,
-} from "../types/renderer";
-import Case from "case";
-import { closeCursor, writeToCursor } from "../utils/rendering";
-import { attr, field } from "../shortcuts/entities";
-import { Attribute } from "../entities/attribute";
-import path from "path";
-import { attrInstantiator, fieldInstantiator } from "../helpers/instantiators";
+import { $attr } from "../shortcuts/queries";
+import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
+import { writeToCursor } from "../utils/rendering";
 import { Module } from "../entities/module";
 import { ModelRenderer } from "./model-renderer";
 import {
@@ -31,49 +20,54 @@ import {
 } from "../shortcuts/attributes";
 
 export class ModelValidatorRenderer extends Renderer {
-  private _modelFiles: RendererSelectedFiles = {};
+  private _modelRenderer!: ModelRenderer;
   private _where?: (module: Module, model: Model) => boolean;
 
-  constructor(options: {
-    modelFiles: RendererOutput;
-    where?: (module: Module, model: Model) => boolean;
-  }) {
+  constructor(options?: { where?: (module: Module, model: Model) => boolean }) {
     super();
-    this._modelFiles = options.modelFiles;
     if (options?.where) this._where = options.where;
   }
 
-  async select(seed: Seed): Promise<RendererSelection> {
-    const modules = seed.$moduleList();
-    const files: RendererFileInput = {
-      packageJson: "package.json",
-      ...this._modelFiles,
-    };
-    const modelsWithModules = this.findModels(seed, this._where);
+  async select(): Promise<RenderSelection> {
+    const modules = this.$seed().$moduleList();
+    const models = this.$models(this._where);
+    this._modelRenderer = this.$seed().$requireRenderer(ModelRenderer);
+
+    const paths: RenderPath[] = [
+      {
+        key: "packageJson",
+        path: "package.json",
+      },
+      ...this._modelRenderer.$pathList(),
+    ];
 
     return {
       modules,
-      files,
-      models: modelsWithModules.map(({ model }) => model),
+      paths,
+      models: models.map(({ model }) => model),
     };
   }
 
-  async render(
-    seed: Seed,
-    selection: RendererSelection,
-    files: RendererFileInput
-  ): Promise<RendererOutput> {
-    const packageJson = addPackgeJsonDependency(files.packageJson, [
+  async render(): Promise<RenderContent[]> {
+    const output: RenderContent[] = [
       {
-        name: "class-validator",
-        version: "^0.14.1",
+        key: "packageJson",
+        content: addPackgeJsonDependency(
+          this.$content("packageJson")!.content,
+          [
+            {
+              name: "class-validator",
+              version: "^0.14.1",
+            },
+          ]
+        ),
       },
-    ]);
+    ];
+    const models = this.$selection().models || [];
 
-    const renderedFiles: RendererOutput = {};
-
-    selection.models?.forEach((model) => {
-      let content = files[ModelRenderer.modelClassName(model)];
+    models.forEach((model) => {
+      const modelKey = this._modelRenderer.$key(model);
+      let content = this.$content(modelKey)?.content || "";
       if (!content) return;
 
       const fields = model.$fieldList();
@@ -85,7 +79,9 @@ export class ModelValidatorRenderer extends Renderer {
           importedValidators.push(validator);
       };
       for (let field of fields) {
-        const fieldCursor = ModelRenderer.fieldSignature(field);
+        const fieldCursor = `  ${this._modelRenderer.$fieldSignature(
+          field
+        )};\n`;
         const attributes = [
           {
             attr: required(),
@@ -164,12 +160,12 @@ export class ModelValidatorRenderer extends Renderer {
         (!content.match("^import") ? "\n" : "") +
         content;
 
-      renderedFiles[ModelRenderer.modelClassName(model)] = content;
+      output.push({
+        key: modelKey,
+        content,
+      });
     });
 
-    return {
-      packageJson,
-      ...renderedFiles,
-    };
+    return output;
   }
 }

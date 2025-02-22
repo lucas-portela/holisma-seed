@@ -6,6 +6,11 @@ export const addPackgeJsonDependency = (
   packageJson.dependencies = packageJson.dependencies || {};
   packageJson.devDependencies = packageJson.devDependencies || {};
   for (const dependency of dependencies) {
+    if (
+      (dependency.dev && packageJson.devDependencies[dependency.name]) ||
+      (!dependency.dev && packageJson.dependencies[dependency.name])
+    )
+      continue;
     dependency.dev
       ? (packageJson.devDependencies[dependency.name] = dependency.version)
       : (packageJson.dependencies[dependency.name] = dependency.version);

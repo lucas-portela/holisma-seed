@@ -119,10 +119,8 @@ const project = seed("project").modules([
 ]);
 
 (async () => {
-  project.workingDir("projects/server/");
-  const modelFiles = await project.render(new ModelRenderer());
-  const validatorFiles = await project.render(
-    new ModelValidatorRenderer({ modelFiles })
-  );
-  console.log(modelFiles, validatorFiles);
+  project
+    .goTo("projects/server/")
+    .pipeline([new ModelRenderer()])
+    .pipeline([new ModelValidatorRenderer()]);
 })();
