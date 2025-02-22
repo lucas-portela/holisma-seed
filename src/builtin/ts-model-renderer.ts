@@ -5,12 +5,11 @@ import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
 import Case from "case";
 import { closeCursor, writeToCursor } from "../utils/rendering";
 import { isArray, ref } from "../shortcuts/attributes";
-import { Attribute } from "../entities/attribute";
 import path from "path";
 import { Module } from "../entities/module";
 import { Field } from "../entities/field";
 
-export class ModelRenderer extends Renderer {
+export class TSModelRenderer extends Renderer {
   private _modelDir = "src/models";
   private _dtoDir = "src/dto";
   private _includeModuleInDir = true;
@@ -28,6 +27,12 @@ export class ModelRenderer extends Renderer {
     if (options?.includeModuleInDir)
       this._includeModuleInDir = options.includeModuleInDir;
     if (options?.where) this._where = options.where;
+  }
+
+  $isDto(model: Model) {
+    const output = this.$output(model.$name());
+    if (output) return !!output.meta?.isDto;
+    return null;
   }
 
   $resolveImport(from: string, model: Model): string {

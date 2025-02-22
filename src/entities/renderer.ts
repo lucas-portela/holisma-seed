@@ -2,8 +2,9 @@ import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
 import { Seed } from "./seed";
 import { Model } from "./model";
 import { $attr } from "../shortcuts/queries";
-import { ref } from "../shortcuts/attributes";
+import { ref, rootModule } from "../shortcuts/attributes";
 import { Module } from "./module";
+import { Feature } from "./feature";
 
 export class Renderer {
   private _seed?: Seed;
@@ -45,9 +46,25 @@ export class Renderer {
     return this.$outputList().find((f) => f.key == key) || null;
   }
 
+  $features(where?: (module: Module, feature: Feature) => boolean) {
+    const modules = this.$seed().$moduleList();
+    const features: { feature: Feature; module: Module }[] = [];
+
+    modules.forEach((mod) => {
+      let foundFeatures = mod.$featureList();
+      if (where)
+        foundFeatures = foundFeatures.filter((feature) => where(mod, feature));
+      features.push(
+        ...foundFeatures.map((feature) => ({ feature, module: mod }))
+      );
+    });
+
+    return features;
+  }
+
   $models(where?: (module: Module, model: Model) => boolean) {
     const modules = this.$seed().$moduleList();
-    const models: { model: Model; module: Module }[] = [];
+    let models: { model: Model; module: Module }[] = [];
 
     modules.forEach((mod) => {
       let foundModels: Model[] = [];
@@ -56,11 +73,23 @@ export class Renderer {
         if (feature.$input()) root.push(feature.$input() as Model);
         if (feature.$output()) root.push(feature.$output() as Model);
 
+        const modelIsAlreadyRegistered = (model: Model) =>
+          foundModels.some((m) => m.$name() == model.$name()) ||
+          models.some((m) => m.model.$name() == model.$name());
+
         const deepSearch = (model: Model) => {
+          const modelRootModule = $attr(model, rootModule());
+          const isAlreadyRegistered = modelIsAlreadyRegistered(model);
           if (
-            !foundModels.some((m) => m.$name() == model.$name()) &&
-            !models.some((m) => m.model.$name() == model.$name())
+            !isAlreadyRegistered ||
+            (modelRootModule && modelRootModule.$name() == mod.$name())
           ) {
+            if (isAlreadyRegistered) {
+              foundModels = foundModels.filter(
+                (m) => m.$name() != model.$name()
+              );
+              models = models.filter((m) => m.model.$name() != model.$name());
+            }
             foundModels.push(model);
             model.$fieldList().forEach((field) => {
               if (field.$type() == "nested") {

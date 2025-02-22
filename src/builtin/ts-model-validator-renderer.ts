@@ -5,7 +5,7 @@ import { $attr } from "../shortcuts/queries";
 import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
 import { writeToCursor } from "../utils/rendering";
 import { Module } from "../entities/module";
-import { ModelRenderer } from "./model-renderer";
+import { TSModelRenderer } from "./ts-model-renderer";
 import {
   isArray,
   inArray,
@@ -19,8 +19,8 @@ import {
   size,
 } from "../shortcuts/attributes";
 
-export class ModelValidatorRenderer extends Renderer {
-  private _modelRenderer!: ModelRenderer;
+export class TSModelValidatorRenderer extends Renderer {
+  private _modelRenderer!: TSModelRenderer;
   private _where?: (module: Module, model: Model) => boolean;
 
   constructor(options?: { where?: (module: Module, model: Model) => boolean }) {
@@ -31,7 +31,7 @@ export class ModelValidatorRenderer extends Renderer {
   async select(): Promise<RenderSelection> {
     const modules = this.$seed().$moduleList();
     const models = this.$models(this._where);
-    this._modelRenderer = this.$seed().$requireRenderer(ModelRenderer);
+    this._modelRenderer = this.$seed().$requireRenderer(TSModelRenderer);
 
     const paths: RenderPath[] = [
       {

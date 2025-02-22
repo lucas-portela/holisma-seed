@@ -1,5 +1,5 @@
-import { ModelRenderer } from "./builtin/model-renderer";
-import { ModelValidatorRenderer } from "./builtin/model-validator-renderer";
+import { TSModelRenderer } from "./builtin/ts-model-renderer";
+import { TSModelValidatorRenderer } from "./builtin/ts-model-validator-renderer";
 import {
   computedValue,
   defaultValue,
@@ -19,6 +19,7 @@ import {
   minLength,
   maxLength,
   isArray,
+  rootModule,
 } from "./shortcuts/attributes";
 import { field, feature, model, mod, seed } from "./shortcuts/entities";
 import { date, bool, str, nested, num } from "./shortcuts/fields";
@@ -47,9 +48,9 @@ const vehicle = model("vehicle")
     ]),
   ]);
 
-const healthCheckResponse = model("health-check-response-dto").fields([
-  str("status"),
-]);
+const healthCheckResponse = model("health-check-response-dto")
+  .fields([str("status")])
+  .attributes([rootModule(mod("public"))]);
 
 const account = model("account")
   .fields([
@@ -121,6 +122,8 @@ const project = seed("project").modules([
 (async () => {
   project
     .goTo("projects/server/")
-    .pipeline([new ModelRenderer()])
-    .pipeline([new ModelValidatorRenderer()]);
+    .pipeline([new TSModelRenderer(), new TSModelValidatorRenderer()])
+    .clear()
+    .goTo("projects/client/")
+    .pipeline([new TSModelRenderer()]);
 })();

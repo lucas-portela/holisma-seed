@@ -1,4 +1,5 @@
 import { Model } from "../entities/model";
+import { Module } from "../entities/module";
 import { attrInstantiator } from "../helpers/instantiators";
 import { attr } from "./entities";
 
@@ -36,6 +37,7 @@ export const httpMethod = attrInstantiator<
   "post" | "get" | "put" | "delete" | "search"
 >("http-method", "get");
 export const urlParam = attrInstantiator<Model>("param");
+export const rootModule = attrInstantiator<Module>("root-module");
 
 // General
 export const isArray = attrInstantiator<boolean>("array", true, false);
