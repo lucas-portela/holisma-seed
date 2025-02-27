@@ -1,120 +1,131 @@
-import { TSModelRenderer } from "./builtin/ts-model-renderer";
-import { TSModelValidatorRenderer } from "./builtin/ts-model-validator-renderer";
+import { TSClassRenderer } from "./builtin/ts-class-renderer";
+import { TSClassValidatorRenderer } from "./builtin/ts-class-validator-renderer";
 import {
-  computedValue,
-  defaultValue,
-  unique,
-  index,
-  trim,
-  lowercase,
-  httpPath,
-  httpMethod,
-  api,
-  matches,
-  max,
-  min,
-  notEmpty,
-  required,
-  size,
-  minLength,
-  maxLength,
-  isArray,
-  rootModule,
+  _computedValue,
+  _defaultValue,
+  _unique,
+  _index,
+  _trim,
+  _lowercase,
+  _httpPath,
+  _httpMethod,
+  _api,
+  _matches,
+  _max,
+  _min,
+  _notEmpty,
+  _required,
+  _size,
+  _minLength,
+  _maxLength,
+  _isArray,
+  _rootModule,
 } from "./shortcuts/attributes";
-import { field, feature, model, mod, seed } from "./shortcuts/entities";
-import { date, bool, str, nested, num } from "./shortcuts/fields";
+import {
+  uField,
+  uFeature,
+  uModel,
+  uModule,
+  uDraft,
+} from "./shortcuts/entities";
+import { uDate, uBoolean, uString, uNested, uNumber } from "./shortcuts/fields";
 
-const createdAt = date("createdAt").attributes([
-  required(),
-  defaultValue(() => new Date()),
+const createdAt = uDate("createdAt").attributes([
+  _required(),
+  _defaultValue(() => new Date()),
 ]);
-const updatedAt = date("updatedAt").attributes([
-  computedValue(() => new Date()),
-  required(false),
+const updatedAt = uDate("updatedAt").attributes([
+  _computedValue(() => new Date()),
+  _required(false),
 ]);
-const timestamp = model("timestamp").fields([createdAt, updatedAt]);
-const isOnline = bool("is-online").attributes([defaultValue(() => false)]);
+const timestamp = uModel("timestamp").fields([createdAt, updatedAt]);
+const isOnline = uBoolean("is-online").attributes([_defaultValue(() => false)]);
 
-const vehicle = model("vehicle")
+const vehicle = uModel("vehicle")
   .extends(timestamp)
   .fields([
-    str("model", [required(), notEmpty(), trim()]),
-    str("plate", [
-      required(),
-      notEmpty(),
-      trim(),
-      size(8),
-      matches(/^[A-Z]{3}\-\d[A-Z]\d{2}$/),
+    uString("model", [
+      _required(),
+      _notEmpty(),
+      _trim(),
+      _matches(/^[A-Z][a-z]+$/gi),
+    ]),
+    uString("plate", [
+      _required(),
+      _notEmpty(),
+      _trim(),
+      _size(8),
+      _matches(/^[A-Z]{3}\-\d[A-Z]\d{2}$/),
     ]),
   ]);
 
-const healthCheckResponse = model("health-check-response-dto")
-  .fields([str("status")])
-  .attributes([rootModule(mod("public"))]);
+const healthCheckResponse = uModel("health-check-response-dto")
+  .fields([uString("status")])
+  .attributes([_rootModule(uModule("public"))]);
 
-const account = model("account")
+const account = uModel("account")
   .fields([
-    num("age", [min(18), max(100)]),
-    str("username", [
-      required(),
-      notEmpty(),
-      minLength(3),
-      maxLength(20),
-      unique(),
-      index(),
-      trim(),
-      lowercase(),
+    uNumber("age", [_min(18), _max(100)]),
+    uString("username", [
+      _required(),
+      _notEmpty(),
+      _minLength(3),
+      _maxLength(20),
+      _unique(),
+      _index(),
+      _trim(),
+      _lowercase(),
     ]),
-    str("password", [required(), notEmpty(), min(8), trim()]),
-    nested("vehicle", vehicle),
-    nested("health", healthCheckResponse),
+    uString("password", [_required(), _notEmpty(), _min(8), _trim()]),
+    uNested("vehicle", vehicle),
+    uNested("health", healthCheckResponse),
   ])
   .extends(timestamp);
 
-const driver = model("driver")
+const driver = uModel("driver")
   .extends(account)
-  .fields([nested("vehicle", vehicle)]);
+  .fields([uNested("vehicle", vehicle)]);
 
-const passenger = model("passenger")
+const passenger = uModel("passenger")
   .extends(account)
   .remove([isOnline])
-  .fields([nested("drivers", driver).attributes([isArray()])]);
+  .fields([uNested("drivers", driver).attributes([_isArray()])]);
 
-const token = model("token-dto").fields([
-  str("token", [required(), notEmpty(), trim()]),
-  str("refresh-token", [required(false), notEmpty(), trim()]),
+const token = uModel("token-dto").fields([
+  uString("token", [_required(), _notEmpty(), _trim()]),
+  uString("refresh-token", [_required(false), _notEmpty(), _trim()]),
 ]);
 
-const project = seed("project").modules([
-  mod("account")
-    .attributes([httpPath("/account"), api("rest")])
+const project = uDraft("project").modules([
+  uModule("account")
+    .attributes([_httpPath("/account"), _api("rest")])
     .features([
-      feature("create-account")
-        .attributes([httpPath("/"), httpMethod("post")])
+      uFeature("create-account")
+        .attributes([_httpPath("/"), _httpMethod("post")])
         .input(
           account.pick("create-account-request-dto", [
-            field("age"),
-            field("username"),
-            field("password"),
+            uField("age"),
+            uField("username"),
+            uField("password"),
           ])
         )
         .output(account),
-      feature("login")
-        .attributes([httpPath("/auth"), httpMethod("post")])
+      uFeature("login")
+        .attributes([_httpPath("/auth"), _httpMethod("post")])
         .output(token),
-      feature("list-accounts")
-        .attributes([httpPath("/")])
+      uFeature("list-accounts")
+        .attributes([_httpPath("/")])
         .output(
-          model("account-list-response-dto").fields([
-            nested("accounts", account).attributes([isArray()]),
+          uModel("account-list-response-dto").fields([
+            uNested("accounts", account).attributes([_isArray()]),
           ])
         ),
     ]),
-  mod("public")
-    .attributes([api("rest")])
+  uModule("public")
+    .attributes([_api("rest")])
     .features([
-      feature("health-check")
-        .attributes([httpPath("/health")])
+      uFeature("health-check")
+        .attributes([_httpPath("/health")])
         .output(healthCheckResponse),
     ]),
 ]);
@@ -122,8 +133,8 @@ const project = seed("project").modules([
 (async () => {
   project
     .goTo("projects/server/")
-    .pipeline([new TSModelRenderer(), new TSModelValidatorRenderer()])
+    .pipeline([new TSClassRenderer(), new TSClassValidatorRenderer()])
     .clear()
     .goTo("projects/client/")
-    .pipeline([new TSModelRenderer()]);
+    .pipeline([new TSClassRenderer()]);
 })();

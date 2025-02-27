@@ -1,16 +1,16 @@
 import { cwd } from "process";
 import { PipelineCursor, RenderContent, RenderPath } from "../types/renderer";
-import { Module } from "./module";
-import { Renderer } from "./renderer";
+import { UModule } from "./module";
+import { URenderer } from "./renderer";
 import fs from "fs";
 import path from "path";
 import { pipeline } from "stream";
 
-export class Seed {
+export class UDraft {
   private _name: string;
-  private _modules: Module[] = [];
+  private _modules: UModule[] = [];
   private _workingDir?: string;
-  private _renderers: Renderer[] = [];
+  private _renderers: URenderer[] = [];
 
   constructor(name: string) {
     this._name = name;
@@ -32,30 +32,30 @@ export class Seed {
     return this._renderers;
   }
 
-  $renderer<Type = Renderer>(rendererClass: new () => Type): Type | null {
+  $renderer<Type = URenderer>(rendererClass: new () => Type): Type | null {
     return (
       (this.$renderers().find((r) => r instanceof rendererClass) as Type) ||
       null
     );
   }
 
-  $requireRenderer<Type = Renderer>(rendererClass: new () => Type): Type {
+  $requireRenderer<Type = URenderer>(rendererClass: new () => Type): Type {
     const renderer = this.$renderer(rendererClass);
     if (renderer) return renderer;
     throw new Error(`Renderer ${rendererClass.name} is required to run first!`);
   }
 
-  extends(seed: Seed) {
+  extends(seed: UDraft) {
     return this.modules(seed.$moduleList());
   }
 
-  modules(modules: Module[]) {
+  modules(modules: UModule[]) {
     this.remove(modules);
     this._modules = this._modules.concat(modules);
     return this;
   }
 
-  remove(modules: Module[]) {
+  remove(modules: UModule[]) {
     this._modules = this._modules.filter(
       (module) => !modules.some((m) => m.$name() == module.$name())
     );
@@ -68,7 +68,7 @@ export class Seed {
   }
 
   pipeline(
-    renderers: Renderer[],
+    renderers: URenderer[],
     waitFor: Promise<void> = Promise.resolve()
   ): PipelineCursor {
     const execution = waitFor.then(
@@ -90,7 +90,7 @@ export class Seed {
         execution.then(() => this.clear());
         return cursor;
       },
-      pipeline: (renderers: Renderer[]) => {
+      pipeline: (renderers: URenderer[]) => {
         return this.pipeline(renderers, execution);
       },
       done: execution,
@@ -107,7 +107,7 @@ export class Seed {
     return this;
   }
 
-  async render(renderer: Renderer) {
+  async render(renderer: URenderer) {
     await renderer.init(this);
     const paths: RenderPath[] = renderer.$pathList();
     const contents: RenderContent[] = [];

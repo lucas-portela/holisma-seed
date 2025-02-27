@@ -1,11 +1,11 @@
-import { model } from "../shortcuts/entities";
-import { Attribute } from "./attribute";
-import { Field } from "./field";
+import { uModel } from "../shortcuts/entities";
+import { UAttribute } from "./attribute";
+import { UField } from "./field";
 
-export class Model {
+export class UModel {
   private _name: string;
-  private _fields: Field[] = [];
-  private _attributes: Attribute<any>[] = [];
+  private _fields: UField[] = [];
+  private _attributes: UAttribute<any>[] = [];
 
   constructor(name: string) {
     this._name = name;
@@ -15,7 +15,7 @@ export class Model {
     return this._name;
   }
 
-  $field(field: Field) {
+  $field(field: UField) {
     const f = this._fields.find((f) => f.$name() == field.$name());
     return f ? f : field;
   }
@@ -24,7 +24,7 @@ export class Model {
     return this._fields;
   }
 
-  $attribute<Type>(attribute: Attribute<Type>) {
+  $attribute<Type>(attribute: UAttribute<Type>) {
     const a = this._attributes.find(
       (attr) => attr.$name() == attribute.$name()
     );
@@ -35,7 +35,7 @@ export class Model {
     return this._attributes;
   }
 
-  attributes(attributes: Attribute<any>[]) {
+  attributes(attributes: UAttribute<any>[]) {
     this.removeAttributes(attributes);
     this._attributes = this._attributes.concat(attributes);
     return this;
@@ -46,32 +46,32 @@ export class Model {
     return this;
   }
 
-  fields(fields: Field[]) {
+  fields(fields: UField[]) {
     this.remove(fields);
     this._fields = this._fields.concat(fields);
     return this;
   }
 
-  extends(model: Model) {
+  extends(model: UModel) {
     return this.fields(model.$fieldList()).attributes(model.$attributeList());
   }
 
-  remove(fields: Field[]) {
+  remove(fields: UField[]) {
     this._fields = this._fields.filter(
       (field) => !fields.some((f) => f.$name() == field.$name())
     );
     return this;
   }
 
-  pick(name: string, fields: Field[]) {
+  pick(name: string, fields: UField[]) {
     const picked = this._fields.filter((field) =>
       fields.some((f) => f.$name() == field.$name())
     );
 
-    return model(name).fields(picked);
+    return uModel(name).fields(picked);
   }
 
-  removeAttributes(attributes: Attribute<any>[]) {
+  removeAttributes(attributes: UAttribute<any>[]) {
     this._attributes = this._attributes.filter(
       (attribute) => !attributes.some((a) => a.$name() == attribute.$name())
     );

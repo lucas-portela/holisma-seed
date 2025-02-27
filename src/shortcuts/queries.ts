@@ -1,13 +1,13 @@
-import { Attribute } from "../entities/attribute";
-import { Feature } from "../entities/feature";
-import { Field } from "../entities/field";
-import { Model } from "../entities/model";
-import { Module } from "../entities/module";
-import { Seed } from "../entities/seed";
+import { UAttribute } from "../entities/attribute";
+import { UFeature } from "../entities/feature";
+import { UField } from "../entities/field";
+import { UModel } from "../entities/model";
+import { UModule } from "../entities/module";
+import { UDraft } from "../entities/seed";
 
 export const $attr = <Type>(
-  root: Module | Feature | Model | Field,
-  name: string | Attribute<Type>
+  root: UModule | UFeature | UModel | UField,
+  name: string | UAttribute<Type>
 ) => {
   const attribute = typeof name != "string" ? name : null;
   name = typeof name == "string" ? name : name.$name();
@@ -17,23 +17,20 @@ export const $attr = <Type>(
     ?.$value() ?? (attribute ? attribute.$default() : null)) as Type | null;
 };
 
-export const $findModules = (
-  seed: Seed,
-  clause: (module: Module) => boolean
+export const $modules = (
+  seed: UDraft,
+  clause: (module: UModule) => boolean
 ) => {
   return seed.$moduleList().filter(clause);
 };
 
-export const $findFeatures = (
-  module: Module,
-  clause: (feature: Feature) => boolean
+export const $features = (
+  module: UModule,
+  clause: (feature: UFeature) => boolean
 ) => {
   return module.$featureList().filter(clause);
 };
 
-export const $findFields = (
-  model: Model,
-  clause: (field: Field) => boolean
-) => {
+export const $fields = (model: UModel, clause: (field: UField) => boolean) => {
   return model.$fieldList().filter(clause);
 };

@@ -1,9 +1,9 @@
-import { Attribute } from "./attribute";
+import { UAttribute } from "./attribute";
 
-export class Field {
+export class UField {
   private _name: string;
   private _type?: string;
-  private _attributes: Attribute<any>[] = [];
+  private _attributes: UAttribute<any>[] = [];
   constructor(name: string, type?: string) {
     this._name = name;
     this._type = type;
@@ -17,7 +17,7 @@ export class Field {
     return this._type;
   }
 
-  $attribute<Type>(attribute: Attribute<Type>) {
+  $attribute<Type>(attribute: UAttribute<Type>) {
     const a = this._attributes.find(
       (attr) => attr.$name() == attribute.$name()
     );
@@ -28,18 +28,18 @@ export class Field {
     return this._attributes;
   }
 
-  attributes(attributes: Attribute<any>[]) {
+  attributes(attributes: UAttribute<any>[]) {
     this.remove(attributes);
     this._attributes = this._attributes.concat(attributes);
     return this;
   }
 
-  extends(field: Field) {
+  extends(field: UField) {
     if (!this._type) this._type = field._type;
     return this.attributes(field.$attributeList());
   }
 
-  remove(attributes: Attribute<any>[]) {
+  remove(attributes: UAttribute<any>[]) {
     this._attributes = this._attributes.filter(
       (attribute) => !attributes.some((a) => a.$name() == attribute.$name())
     );

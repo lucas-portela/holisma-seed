@@ -1,12 +1,12 @@
-import { Feature } from "../entities/feature";
-import { Model } from "../entities/model";
-import { Module } from "../entities/module";
-import { Renderer } from "../entities/renderer";
+import { UFeature } from "../entities/feature";
+import { UModel } from "../entities/model";
+import { UModule } from "../entities/module";
+import { URenderer } from "../entities/renderer";
 
 export type RenderSelection = {
-  modules?: Module[];
-  features?: Feature[];
-  models?: Model[];
+  modules?: UModule[];
+  features?: UFeature[];
+  models?: UModel[];
   paths?: RenderPath[];
 };
 
@@ -25,6 +25,6 @@ export type RenderContent = {
 export type PipelineCursor = {
   goTo: (workingDir: string) => PipelineCursor;
   clear: () => PipelineCursor;
-  pipeline: (renderers: Renderer[]) => PipelineCursor;
+  pipeline: (renderers: URenderer[]) => PipelineCursor;
   done: Promise<void>;
 };

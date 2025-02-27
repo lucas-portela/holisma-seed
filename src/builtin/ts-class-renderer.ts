@@ -1,25 +1,25 @@
-import { Model } from "../entities/model";
-import { Renderer } from "../entities/renderer";
+import { UModel } from "../entities/model";
+import { URenderer } from "../entities/renderer";
 import { $attr } from "../shortcuts/queries";
 import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
 import Case from "case";
 import { closeCursor, writeToCursor } from "../utils/rendering";
-import { isArray, ref } from "../shortcuts/attributes";
+import { _isArray, _ref } from "../shortcuts/attributes";
 import path from "path";
-import { Module } from "../entities/module";
-import { Field } from "../entities/field";
+import { UModule } from "../entities/module";
+import { UField } from "../entities/field";
 
-export class TSModelRenderer extends Renderer {
+export class TSClassRenderer extends URenderer {
   private _modelDir = "src/models";
   private _dtoDir = "src/dto";
   private _includeModuleInDir = true;
-  private _where?: (module: Module, model: Model) => boolean;
+  private _where?: (module: UModule, model: UModel) => boolean;
 
   constructor(options?: {
     modelDir?: string;
     dtoDir?: string;
     includeModuleInDir?: boolean;
-    where?: (module: Module, model: Model) => boolean;
+    where?: (module: UModule, model: UModel) => boolean;
   }) {
     super();
     if (options?.modelDir) this._modelDir = options.modelDir;
@@ -29,13 +29,13 @@ export class TSModelRenderer extends Renderer {
     if (options?.where) this._where = options.where;
   }
 
-  $isDto(model: Model) {
+  $isDto(model: UModel) {
     const output = this.$output(model.$name());
     if (output) return !!output.meta?.isDto;
     return null;
   }
 
-  $resolveImport(from: string, model: Model): string {
+  $resolveImport(from: string, model: UModel): string {
     if (!this.$selection().paths) return "";
     const modelPath = this.$path(this.$className(model));
     if (!modelPath) return "";
@@ -58,37 +58,37 @@ export class TSModelRenderer extends Renderer {
     )}";\n`;
   }
 
-  $key(model: Model) {
+  $key(model: UModel) {
     return this.$className(model);
   }
 
-  $className(model: Model) {
+  $className(model: UModel) {
     return Case.pascal(model.$name());
   }
 
-  $fileName(model: Model, extension = true) {
+  $fileName(model: UModel, extension = true) {
     return `${Case.kebab(model.$name())}${extension ? ".ts" : ""}`;
   }
 
-  $fieldName(field: Field) {
+  $fieldName(field: UField) {
     return Case.camel(field.$name());
   }
 
-  $fieldType(field: Field) {
+  $fieldType(field: UField) {
     let type = field.$type();
     if (type === "date") type = "Date";
     else if (["interger", "float"].includes(type + "")) type = "number";
     return type;
   }
 
-  $fieldSignature(field: Field) {
+  $fieldSignature(field: UField) {
     let type = this.$fieldType(field);
     if (type === "nested") {
-      const nestedModel = $attr(field, ref());
+      const nestedModel = $attr(field, _ref());
       if (nestedModel) type = this.$className(nestedModel);
     }
     return `${this.$fieldName(field)}: ${type}${
-      $attr(field, isArray()) ? "[]" : ""
+      $attr(field, _isArray()) ? "[]" : ""
     }`;
   }
 
@@ -141,7 +141,7 @@ export class TSModelRenderer extends Renderer {
         const fieldSignature = this.$fieldSignature(field);
 
         if (field.$type() == "nested") {
-          const nestedModel = $attr(field, ref());
+          const nestedModel = $attr(field, _ref());
           if (nestedModel) {
             if (!importedModels.includes(this.$className(nestedModel))) {
               content = writeToCursor(

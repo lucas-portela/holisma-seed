@@ -1,10 +1,10 @@
-import { Attribute } from "./attribute";
-import { Feature } from "./feature";
+import { UAttribute } from "./attribute";
+import { UFeature } from "./feature";
 
-export class Module {
+export class UModule {
   private _name: string;
-  private _features: Feature[] = [];
-  private _attributes: Attribute<any>[] = [];
+  private _features: UFeature[] = [];
+  private _attributes: UAttribute<any>[] = [];
 
   constructor(name: string) {
     this._name = name;
@@ -18,7 +18,7 @@ export class Module {
     return this._features;
   }
 
-  $attribute<Type>(attribute: Attribute<Type>) {
+  $attribute<Type>(attribute: UAttribute<Type>) {
     const a = this._attributes.find(
       (attr) => attr.$name() == attribute.$name()
     );
@@ -34,36 +34,36 @@ export class Module {
     return this._attributes;
   }
 
-  $where(clause: (module: Feature) => boolean) {
+  $where(clause: (module: UFeature) => boolean) {
     return this._features.filter(clause);
   }
 
-  attributes(attributes: Attribute<any>[]) {
+  attributes(attributes: UAttribute<any>[]) {
     this.removeAttributes(attributes);
     this._attributes = this._attributes.concat(attributes);
     return this;
   }
 
-  features(features: Feature[]) {
+  features(features: UFeature[]) {
     this.remove(features);
     this._features = this._features.concat(features);
     return this;
   }
 
-  extends(module: Module) {
+  extends(module: UModule) {
     return this.features(module.$featureList()).attributes(
       module.$attributeList()
     );
   }
 
-  remove(features: Feature[]) {
+  remove(features: UFeature[]) {
     this._features = this._features.filter(
       (feature) => !features.some((m) => m.$name() === feature.$name())
     );
     return this;
   }
 
-  removeAttributes(attributes: Attribute<any>[]) {
+  removeAttributes(attributes: UAttribute<any>[]) {
     this._attributes = this._attributes.filter(
       (attribute) => !attributes.some((a) => a.$name() == attribute.$name())
     );

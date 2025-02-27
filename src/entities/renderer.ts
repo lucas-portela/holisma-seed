@@ -1,13 +1,13 @@
 import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
-import { Seed } from "./seed";
-import { Model } from "./model";
+import { UDraft } from "./seed";
+import { UModel } from "./model";
 import { $attr } from "../shortcuts/queries";
-import { ref, rootModule } from "../shortcuts/attributes";
-import { Module } from "./module";
-import { Feature } from "./feature";
+import { _ref, _rootModule } from "../shortcuts/attributes";
+import { UModule } from "./module";
+import { UFeature } from "./feature";
 
-export class Renderer {
-  private _seed?: Seed;
+export class URenderer {
+  private _seed?: UDraft;
   private _selection: RenderSelection = {};
   private _contents: RenderContent[] = [];
   private _outputs: RenderContent[] = [];
@@ -15,7 +15,7 @@ export class Renderer {
   constructor() {}
 
   $seed() {
-    return this._seed as Seed;
+    return this._seed as UDraft;
   }
 
   $selection() {
@@ -46,9 +46,9 @@ export class Renderer {
     return this.$outputList().find((f) => f.key == key) || null;
   }
 
-  $features(where?: (module: Module, feature: Feature) => boolean) {
+  $features(where?: (module: UModule, feature: UFeature) => boolean) {
     const modules = this.$seed().$moduleList();
-    const features: { feature: Feature; module: Module }[] = [];
+    const features: { feature: UFeature; module: UModule }[] = [];
 
     modules.forEach((mod) => {
       let foundFeatures = mod.$featureList();
@@ -62,23 +62,23 @@ export class Renderer {
     return features;
   }
 
-  $models(where?: (module: Module, model: Model) => boolean) {
+  $models(where?: (module: UModule, model: UModel) => boolean) {
     const modules = this.$seed().$moduleList();
-    let models: { model: Model; module: Module }[] = [];
+    let models: { model: UModel; module: UModule }[] = [];
 
     modules.forEach((mod) => {
-      let foundModels: Model[] = [];
+      let foundModels: UModel[] = [];
       mod.$featureList().forEach((feature) => {
-        const root: Model[] = [];
-        if (feature.$input()) root.push(feature.$input() as Model);
-        if (feature.$output()) root.push(feature.$output() as Model);
+        const root: UModel[] = [];
+        if (feature.$input()) root.push(feature.$input() as UModel);
+        if (feature.$output()) root.push(feature.$output() as UModel);
 
-        const modelIsAlreadyRegistered = (model: Model) =>
+        const modelIsAlreadyRegistered = (model: UModel) =>
           foundModels.some((m) => m.$name() == model.$name()) ||
           models.some((m) => m.model.$name() == model.$name());
 
-        const deepSearch = (model: Model) => {
-          const modelRootModule = $attr(model, rootModule());
+        const deepSearch = (model: UModel) => {
+          const modelRootModule = $attr(model, _rootModule());
           const isAlreadyRegistered = modelIsAlreadyRegistered(model);
           if (
             !isAlreadyRegistered ||
@@ -93,7 +93,7 @@ export class Renderer {
             foundModels.push(model);
             model.$fieldList().forEach((field) => {
               if (field.$type() == "nested") {
-                const nestedModel = $attr(field, ref());
+                const nestedModel = $attr(field, _ref());
                 if (nestedModel) deepSearch(nestedModel);
               }
             });
@@ -109,7 +109,7 @@ export class Renderer {
     return models;
   }
 
-  async init(seed: Seed) {
+  async init(seed: UDraft) {
     this._seed = seed;
     this._selection = await this.select();
     return this;

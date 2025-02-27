@@ -1,29 +1,32 @@
-import { Model } from "../entities/model";
-import { Renderer } from "../entities/renderer";
+import { UModel } from "../entities/model";
+import { URenderer } from "../entities/renderer";
 import { addPackgeJsonDependency } from "../helpers/json";
 import { $attr } from "../shortcuts/queries";
 import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
 import { writeToCursor } from "../utils/rendering";
-import { Module } from "../entities/module";
-import { TSModelRenderer } from "./ts-model-renderer";
+import { UModule } from "../entities/module";
+import { TSClassRenderer } from "./ts-class-renderer";
 import {
-  isArray,
-  inArray,
-  max,
-  maxLength,
-  min,
-  minLength,
-  notEmpty,
-  notInArray,
-  required,
-  size,
+  _isArray,
+  _inArray,
+  _max,
+  _maxLength,
+  _min,
+  _minLength,
+  _notEmpty,
+  _notInArray,
+  _required,
+  _size,
+  _matches,
 } from "../shortcuts/attributes";
 
-export class TSModelValidatorRenderer extends Renderer {
-  private _modelRenderer!: TSModelRenderer;
-  private _where?: (module: Module, model: Model) => boolean;
+export class TSClassValidatorRenderer extends URenderer {
+  private _modelRenderer!: TSClassRenderer;
+  private _where?: (module: UModule, model: UModel) => boolean;
 
-  constructor(options?: { where?: (module: Module, model: Model) => boolean }) {
+  constructor(options?: {
+    where?: (module: UModule, model: UModel) => boolean;
+  }) {
     super();
     if (options?.where) this._where = options.where;
   }
@@ -31,7 +34,7 @@ export class TSModelValidatorRenderer extends Renderer {
   async select(): Promise<RenderSelection> {
     const modules = this.$seed().$moduleList();
     const models = this.$models(this._where);
-    this._modelRenderer = this.$seed().$requireRenderer(TSModelRenderer);
+    this._modelRenderer = this.$seed().$requireRenderer(TSClassRenderer);
 
     const paths: RenderPath[] = [
       {
@@ -84,44 +87,49 @@ export class TSModelValidatorRenderer extends Renderer {
         )};\n`;
         const attributes = [
           {
-            attr: required(),
-            value: (val: boolean) => (!val ? `@IsOptional()` : `@IsDefined()`),
+            attr: _required(),
+            value: (val: boolean) =>
+              val === true ? `@IsDefined()` : `@IsOptional()`,
           },
           {
-            attr: min(),
+            attr: _min(),
             value: (val: number) => `@Min(${val})`,
           },
           {
-            attr: max(),
+            attr: _max(),
             value: (val: number) => `@Max(${val})`,
           },
           {
-            attr: minLength(),
+            attr: _minLength(),
             value: (val: number) => `@MinLength(${val})`,
           },
           {
-            attr: maxLength(),
+            attr: _maxLength(),
             value: (val: number) => `@MaxLength(${val})`,
           },
           {
-            attr: notEmpty(),
-            value: (val: number) => (val ? `@IsNotEmpty()` : ""),
+            attr: _notEmpty(),
+            value: (val: boolean) => (val === true ? `@IsNotEmpty()` : ""),
           },
           {
-            attr: size(),
+            attr: _size(),
             value: (val: number) => `@Length(${val})`,
           },
           {
-            attr: inArray(),
+            attr: _inArray(),
             value: (val: any[]) => `@IsIn(${JSON.stringify(val)})`,
           },
           {
-            attr: notInArray(),
+            attr: _notInArray(),
             value: (val: any[]) => `@IsNotIn(${JSON.stringify(val)})`,
           },
           {
-            attr: isArray(),
-            value: (val: boolean) => (val ? `@IsArray()` : ""),
+            attr: _isArray(),
+            value: (val: boolean) => (val === true ? "" : `@IsArray()`),
+          },
+          {
+            attr: _matches(),
+            value: (val: RegExp) => `@Matches(${val.toString()})`,
           },
         ];
 
@@ -129,19 +137,36 @@ export class TSModelValidatorRenderer extends Renderer {
           const value = $attr(field, attribute.attr.$name());
           if (value !== null) {
             const decorator = (attribute.value as any)(value);
-            if (decorator) importValidator(decorator.match(/@(\w+)/)[1]);
-            content = writeToCursor(fieldCursor, `  ${decorator}\n`, content);
+            if (decorator) {
+              importValidator(decorator.match(/@(\w+)/)[1]);
+              content = writeToCursor(fieldCursor, `  ${decorator}\n`, content);
+            }
           }
         }
 
         let decorator = "";
-        if (field.$type() === "string") decorator = `@IsString()`;
-        else if (field.$type() === "number") decorator = `@IsNumber()`;
-        else if (field.$type() === "boolean") decorator = `@IsBoolean()`;
-        else if (field.$type() === "date") decorator = `@IsDate()`;
-        else if (field.$type() === "integer") decorator = `@IsInt()`;
-        else if (field.$type() === "float") decorator = `@IsNumber()`;
-        else if (field.$type() === "nested") decorator = `@ValidateNested()`;
+        let validationOptions = "";
+        if ($attr(field, _isArray()) === true)
+          validationOptions = "{each: true}";
+
+        if (field.$type() === "string")
+          decorator = `@IsString(${validationOptions})`;
+        else if (field.$type() === "number")
+          decorator = `@IsNumber(${
+            validationOptions ? "{}, " + validationOptions : ""
+          })`;
+        else if (field.$type() === "boolean")
+          decorator = `@IsBoolean(${validationOptions})`;
+        else if (field.$type() === "date")
+          decorator = `@IsDate(${validationOptions})`;
+        else if (field.$type() === "integer")
+          decorator = `@IsInt(${validationOptions})`;
+        else if (field.$type() === "float")
+          decorator = `@IsNumber(${
+            validationOptions ? "{}, " + validationOptions : ""
+          })`;
+        else if (field.$type() === "nested")
+          decorator = `@ValidateNested(${validationOptions})`;
 
         if (decorator) {
           importValidator(decorator.match(/@(\w+)/)?.[1]);

@@ -1,17 +1,17 @@
-import { Attribute } from "../entities/attribute";
-import { Model } from "../entities/model";
-import { fieldInstantiator } from "../helpers/instantiators";
-import { ref } from "./attributes";
-import { field } from "./entities";
+import { UAttribute } from "../entities/attribute";
+import { UModel } from "../entities/model";
+import { fieldBuilder } from "../helpers/builders";
+import { _ref } from "./attributes";
+import { uField } from "./entities";
 
-export const str = fieldInstantiator("string");
-export const num = fieldInstantiator("number");
-export const int = fieldInstantiator("integer");
-export const float = fieldInstantiator("float");
-export const bool = fieldInstantiator("boolean");
-export const date = fieldInstantiator("date");
-export const nested = (
+export const uString = fieldBuilder("string");
+export const uNumber = fieldBuilder("number");
+export const uInteger = fieldBuilder("integer");
+export const uFloat = fieldBuilder("float");
+export const uBoolean = fieldBuilder("boolean");
+export const uDate = fieldBuilder("date");
+export const uNested = (
   name: string,
-  nested: Model,
-  attributes: Attribute<any>[] = []
-) => field(name, "nested").attributes([ref(nested), ...attributes]);
+  nested: UModel,
+  attributes: UAttribute<any>[] = []
+) => uField(name, "nested").attributes([_ref(nested), ...attributes]);

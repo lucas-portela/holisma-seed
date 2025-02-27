@@ -1,4 +1,4 @@
-export class Attribute<Type> {
+export class UAttribute<Type> {
   private _name: string;
   private _value?: Type;
   private _defaultValue?: Type;
