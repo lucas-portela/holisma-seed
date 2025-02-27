@@ -7,7 +7,7 @@ import { writeToCursor } from "../utils/rendering";
 import { UModule } from "../entities/module";
 import { TSClassRenderer } from "./ts-class-renderer";
 import {
-  _isArray,
+  _array,
   _inArray,
   _max,
   _maxLength,
@@ -20,8 +20,12 @@ import {
   _matches,
 } from "../shortcuts/attributes";
 
+const KEYS = {
+  packageJson: "packageJson",
+};
+
 export class TSClassValidatorRenderer extends URenderer {
-  private _modelRenderer!: TSClassRenderer;
+  private _classRenderer!: TSClassRenderer;
   private _where?: (module: UModule, model: UModel) => boolean;
 
   constructor(options?: {
@@ -32,29 +36,33 @@ export class TSClassValidatorRenderer extends URenderer {
   }
 
   async select(): Promise<RenderSelection> {
-    const modules = this.$seed().$moduleList();
-    const models = this.$models(this._where);
-    this._modelRenderer = this.$seed().$requireRenderer(TSClassRenderer);
+    this._classRenderer = this.$seed().$requireRenderer(this, TSClassRenderer);
+
+    const models = this.$models(this._where)
+      .map(({ model }) => model)
+      .filter(
+        (model) =>
+          !!this._classRenderer.$output(this._classRenderer.$key(model))
+      );
 
     const paths: RenderPath[] = [
       {
-        key: "packageJson",
+        key: KEYS.packageJson,
         path: "package.json",
       },
-      ...this._modelRenderer.$pathList(),
+      ...this._classRenderer.$paths(models),
     ];
 
     return {
-      modules,
       paths,
-      models: models.map(({ model }) => model),
+      models,
     };
   }
 
   async render(): Promise<RenderContent[]> {
     const output: RenderContent[] = [
       {
-        key: "packageJson",
+        key: KEYS.packageJson,
         content: addPackgeJsonDependency(
           this.$content("packageJson")!.content,
           [
@@ -69,11 +77,11 @@ export class TSClassValidatorRenderer extends URenderer {
     const models = this.$selection().models || [];
 
     models.forEach((model) => {
-      const modelKey = this._modelRenderer.$key(model);
+      const modelKey = this._classRenderer.$key(model);
       let content = this.$content(modelKey)?.content || "";
       if (!content) return;
 
-      const fields = model.$fieldList();
+      const fields = model.$fields();
 
       const importedValidators: string[] = [];
       const importValidator = (validator?: string) => {
@@ -82,7 +90,7 @@ export class TSClassValidatorRenderer extends URenderer {
           importedValidators.push(validator);
       };
       for (let field of fields) {
-        const fieldCursor = `  ${this._modelRenderer.$fieldSignature(
+        const fieldCursor = `  ${this._classRenderer.$fieldSignature(
           field
         )};\n`;
         const attributes = [
@@ -124,8 +132,8 @@ export class TSClassValidatorRenderer extends URenderer {
             value: (val: any[]) => `@IsNotIn(${JSON.stringify(val)})`,
           },
           {
-            attr: _isArray(),
-            value: (val: boolean) => (val === true ? "" : `@IsArray()`),
+            attr: _array(),
+            value: (val: boolean) => (val === true ? `@IsArray()` : ""),
           },
           {
             attr: _matches(),
@@ -134,7 +142,7 @@ export class TSClassValidatorRenderer extends URenderer {
         ];
 
         for (let attribute of attributes) {
-          const value = $attr(field, attribute.attr.$name());
+          const value = $attr<any>(field, attribute.attr);
           if (value !== null) {
             const decorator = (attribute.value as any)(value);
             if (decorator) {
@@ -146,8 +154,7 @@ export class TSClassValidatorRenderer extends URenderer {
 
         let decorator = "";
         let validationOptions = "";
-        if ($attr(field, _isArray()) === true)
-          validationOptions = "{each: true}";
+        if ($attr(field, _array()) === true) validationOptions = "{each: true}";
 
         if (field.$type() === "string")
           decorator = `@IsString(${validationOptions})`;

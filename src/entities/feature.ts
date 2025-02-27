@@ -22,8 +22,8 @@ export class UFeature {
     return a ? a : attribute;
   }
 
-  $attributeList() {
-    return this._attributes;
+  $attributes() {
+    return [...this._attributes];
   }
 
   attributes(attributes: UAttribute<any>[]) {
@@ -41,7 +41,7 @@ export class UFeature {
   }
 
   extends(feature: UFeature) {
-    this.attributes(feature.$attributeList());
+    this.attributes(feature.$attributes());
     if (feature._input) this.input(feature._input);
     if (feature._output) this.output(feature._output);
     return this;

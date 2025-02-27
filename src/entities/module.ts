@@ -1,9 +1,13 @@
+import { _rootModule } from "../shortcuts/attributes";
+import { $attr } from "../shortcuts/queries";
 import { UAttribute } from "./attribute";
 import { UFeature } from "./feature";
+import { UModel } from "./model";
 
 export class UModule {
   private _name: string;
   private _features: UFeature[] = [];
+  private _models: UModel[] = [];
   private _attributes: UAttribute<any>[] = [];
 
   constructor(name: string) {
@@ -14,8 +18,12 @@ export class UModule {
     return this._name;
   }
 
-  $featureList() {
-    return this._features;
+  $features() {
+    return [...this._features];
+  }
+
+  $models() {
+    return [...this._models];
   }
 
   $attribute<Type>(attribute: UAttribute<Type>) {
@@ -30,7 +38,7 @@ export class UModule {
     return a ? a.$value() : undefined;
   }
 
-  $attributeList() {
+  $attributes() {
     return this._attributes;
   }
 
@@ -44,16 +52,28 @@ export class UModule {
     return this;
   }
 
+  models(models: UModel[]) {
+    this.removeModels(models);
+    this._models = this._models.concat(models);
+    this._models.forEach((model) => {
+      model.attributes([_rootModule(this)]);
+    });
+    return this;
+  }
+
   features(features: UFeature[]) {
     this.remove(features);
     this._features = this._features.concat(features);
+    this._features.forEach((feature) => {
+      feature.attributes([_rootModule(this)]);
+    });
     return this;
   }
 
   extends(module: UModule) {
-    return this.features(module.$featureList()).attributes(
-      module.$attributeList()
-    );
+    return this.features(module.$features())
+      .attributes(module.$attributes())
+      .models(module.$models());
   }
 
   remove(features: UFeature[]) {
@@ -66,6 +86,13 @@ export class UModule {
   removeAttributes(attributes: UAttribute<any>[]) {
     this._attributes = this._attributes.filter(
       (attribute) => !attributes.some((a) => a.$name() == attribute.$name())
+    );
+    return this;
+  }
+
+  removeModels(models: UModel[]) {
+    this._models = this._models.filter(
+      (model) => !models.some((m) => m.$name() == model.$name())
     );
     return this;
   }

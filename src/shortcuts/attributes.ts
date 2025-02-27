@@ -1,11 +1,10 @@
 import { UModel } from "../entities/model";
 import { UModule } from "../entities/module";
 import { attrBuilder } from "../helpers/builders";
-import { uAttr } from "./entities";
+import { uattr } from "./entities";
 
 // Validation
 export const _required = attrBuilder<boolean>("required", true, true);
-export const _optional = attrBuilder<boolean>("optional", true, false);
 export const _min = attrBuilder<number>("min", 0);
 export const _max = attrBuilder<number>("max", Number.MAX_SAFE_INTEGER);
 export const _minLength = attrBuilder<number>("min-length", 0);
@@ -26,10 +25,12 @@ export const _uppercase = attrBuilder<boolean>("uppercase", true, false);
 export const _capitalize = attrBuilder<boolean>("capitalize", true, false);
 
 // Database
+export const _schema = attrBuilder<string>("schema");
 export const _primary = attrBuilder<boolean>("primary", true, false);
-export const _index = attrBuilder<number>("index", 1);
+export const _index = attrBuilder<number | boolean>("index", 1);
 export const _unique = attrBuilder<boolean>("unique", true, false);
 export const _virtual = attrBuilder<boolean>("virtual", true, false);
+export const _noId = attrBuilder<boolean>("no-id", true, false);
 
 // Modules and Features
 export const _api = attrBuilder<string>("api", "rest");
@@ -41,9 +42,9 @@ export const _urlParam = attrBuilder<UModel>("param");
 export const _rootModule = attrBuilder<UModule>("root-module");
 
 // General
-export const _isArray = attrBuilder<boolean>("array", true, false);
+export const _array = attrBuilder<boolean>("array", true, false);
 export const _ref = attrBuilder<UModel>("ref");
 export const _defaultValue = <Type>(valueFn?: () => Type) =>
-  uAttr<string>("default-value", valueFn?.toString());
+  uattr<string>("default-value", valueFn?.toString());
 export const _computedValue = <Type>(valueFn: (model: UModel) => Type) =>
-  uAttr<string>("computed-value", valueFn?.toString());
+  uattr<string>("computed-value", valueFn?.toString());

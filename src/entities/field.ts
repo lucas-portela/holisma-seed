@@ -24,8 +24,8 @@ export class UField {
     return a ? a : attribute;
   }
 
-  $attributeList() {
-    return this._attributes;
+  $attributes() {
+    return [...this._attributes];
   }
 
   attributes(attributes: UAttribute<any>[]) {
@@ -36,7 +36,7 @@ export class UField {
 
   extends(field: UField) {
     if (!this._type) this._type = field._type;
-    return this.attributes(field.$attributeList());
+    return this.attributes(field.$attributes());
   }
 
   remove(attributes: UAttribute<any>[]) {

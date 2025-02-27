@@ -1,5 +1,5 @@
 import { UAttribute } from "../entities/attribute";
-import { uAttr, uField } from "../shortcuts/entities";
+import { uattr, uField } from "../shortcuts/entities";
 
 export const fieldBuilder =
   (type: string, builtInAttributes: UAttribute<any>[] = []) =>
@@ -13,6 +13,11 @@ export const attrBuilder =
     defaultWhenNotPresent?: Type
   ) =>
   (value?: Type) =>
-    uAttr<Type>(name, value ?? defaultWhenPresent).default(
+    uattr<Type>(name, value ?? defaultWhenPresent).default(
       defaultWhenNotPresent
     );
+
+export const attrBuilderWithRequiredValue =
+  <Type>(name: string, defaultWhenNotPresent?: Type) =>
+  (value: Type) =>
+    uattr<Type>(name, value).default(defaultWhenNotPresent);

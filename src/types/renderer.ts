@@ -26,5 +26,5 @@ export type PipelineCursor = {
   goTo: (workingDir: string) => PipelineCursor;
   clear: () => PipelineCursor;
   pipeline: (renderers: URenderer[]) => PipelineCursor;
-  done: Promise<void>;
+  exec(): Promise<void>;
 };

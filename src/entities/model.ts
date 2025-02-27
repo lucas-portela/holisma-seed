@@ -20,8 +20,8 @@ export class UModel {
     return f ? f : field;
   }
 
-  $fieldList() {
-    return this._fields;
+  $fields() {
+    return [...this._fields];
   }
 
   $attribute<Type>(attribute: UAttribute<Type>) {
@@ -31,8 +31,8 @@ export class UModel {
     return a ? a : attribute;
   }
 
-  $attributeList() {
-    return this._attributes;
+  $attributes() {
+    return [...this._attributes];
   }
 
   attributes(attributes: UAttribute<any>[]) {
@@ -53,7 +53,7 @@ export class UModel {
   }
 
   extends(model: UModel) {
-    return this.fields(model.$fieldList()).attributes(model.$attributeList());
+    return this.fields(model.$fields()).attributes(model.$attributes());
   }
 
   remove(fields: UField[]) {
@@ -63,9 +63,12 @@ export class UModel {
     return this;
   }
 
-  pick(name: string, fields: UField[]) {
+  pick(name: string, fields: (UField | string)[]) {
     const picked = this._fields.filter((field) =>
-      fields.some((f) => f.$name() == field.$name())
+      fields.some((f) => {
+        if (typeof f == "string") return f == field.$name();
+        else return f.$name() == field.$name();
+      })
     );
 
     return uModel(name).fields(picked);

@@ -4,14 +4,14 @@ import { $attr } from "../shortcuts/queries";
 import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
 import Case from "case";
 import { closeCursor, writeToCursor } from "../utils/rendering";
-import { _isArray, _ref } from "../shortcuts/attributes";
+import { _array, _ref, _required } from "../shortcuts/attributes";
 import path from "path";
 import { UModule } from "../entities/module";
 import { UField } from "../entities/field";
 
 export class TSClassRenderer extends URenderer {
-  private _modelDir = "src/models";
-  private _dtoDir = "src/dto";
+  private _entityDir = "src/entities";
+  private _dtoDir = "src/dtos";
   private _includeModuleInDir = true;
   private _where?: (module: UModule, model: UModel) => boolean;
 
@@ -22,7 +22,7 @@ export class TSClassRenderer extends URenderer {
     where?: (module: UModule, model: UModel) => boolean;
   }) {
     super();
-    if (options?.modelDir) this._modelDir = options.modelDir;
+    if (options?.modelDir) this._entityDir = options.modelDir;
     if (options?.dtoDir) this._dtoDir = options.dtoDir;
     if (options?.includeModuleInDir)
       this._includeModuleInDir = options.includeModuleInDir;
@@ -62,6 +62,17 @@ export class TSClassRenderer extends URenderer {
     return this.$className(model);
   }
 
+  $keys(models: UModel[]) {
+    return models.map((model) => this.$key(model));
+  }
+
+  $paths(models?: UModel[]) {
+    let paths = super.$paths();
+    if (models)
+      paths = paths.filter((p) => models.some((m) => p.key === this.$key(m)));
+    return paths;
+  }
+
   $className(model: UModel) {
     return Case.pascal(model.$name());
   }
@@ -75,9 +86,10 @@ export class TSClassRenderer extends URenderer {
   }
 
   $fieldType(field: UField) {
-    let type = field.$type();
+    let type = field.$type() + "";
     if (type === "date") type = "Date";
-    else if (["interger", "float"].includes(type + "")) type = "number";
+    else if (type === "ref-id") type = "string";
+    else if (["interger", "float"].includes(type)) type = "number";
     return type;
   }
 
@@ -87,13 +99,12 @@ export class TSClassRenderer extends URenderer {
       const nestedModel = $attr(field, _ref());
       if (nestedModel) type = this.$className(nestedModel);
     }
-    return `${this.$fieldName(field)}: ${type}${
-      $attr(field, _isArray()) ? "[]" : ""
-    }`;
+    return `${this.$fieldName(field)}${
+      !$attr(field, _required()) ? "?" : ""
+    }: ${type}${$attr(field, _array()) ? "[]" : ""}`;
   }
 
   async select(): Promise<RenderSelection> {
-    const modules = this.$seed().$moduleList();
     const models = this.$models(this._where);
     const paths: RenderPath[] = [];
 
@@ -105,7 +116,7 @@ export class TSClassRenderer extends URenderer {
         key: this.$key(model),
         meta: { isDto },
         path: path.join(
-          isDto ? this._dtoDir : this._modelDir,
+          isDto ? this._dtoDir : this._entityDir,
           this._includeModuleInDir ? Case.kebab(module.$name()) : "",
           this.$fileName(model)
         ),
@@ -113,7 +124,6 @@ export class TSClassRenderer extends URenderer {
     });
 
     return {
-      modules,
       paths,
       models: models.map(({ model }) => model),
     };
@@ -130,10 +140,10 @@ export class TSClassRenderer extends URenderer {
       const fieldCursor = "#field-cursor\n";
       const importCursor = "#import-cursor\n";
 
-      const fields = model.$fieldList();
+      const fields = model.$fields();
       const importedModels: string[] = [];
 
-      let content = `#import-cursor\nexport class ${this.$className(
+      let content = `${importCursor}export class ${this.$className(
         model
       )} {\n${fieldCursor}}`;
 
