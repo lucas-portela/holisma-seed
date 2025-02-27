@@ -2,6 +2,8 @@ import { TSClassRenderer } from "./builtin/ts-class-renderer";
 import { TSClassValidatorRenderer } from "./builtin/ts-class-validator-renderer";
 import { TSMongooseSchemaRenderer } from "./builtin/ts-mongoose-schema-renderer";
 import {
+  _array,
+  _enum,
   _index,
   _matches,
   _notEmpty,
@@ -10,12 +12,18 @@ import {
   _unique,
 } from "./shortcuts/attributes";
 import { uDraft, uFeature, uModel, uModule } from "./shortcuts/entities";
-import { uDate, uNested, uReference, uString } from "./shortcuts/fields";
+import { uDate, uEnum, uNested, uReference, uString } from "./shortcuts/fields";
 
 const timesamps = uModel("timestamps").fields([
   uDate("createdAt").attributes([_required()]),
   uDate("updatedAt").attributes([_required(false)]),
 ]);
+
+enum AccountType {
+  ADMIN,
+  USER,
+  GUEST,
+}
 
 const project = uDraft("test-project").modules([
   uModule("account")
@@ -26,6 +34,10 @@ const project = uDraft("test-project").modules([
           uString("name").attributes([_notEmpty()]),
           uString("email").attributes([_unique(), _matches(/.+@.+\..+/)]),
           uString("password").attributes([]),
+          uEnum("type", "account-type", AccountType).attributes([
+            _required(),
+            _array(),
+          ]),
         ])
         .extends(timesamps),
     ])
@@ -62,6 +74,7 @@ const project = uDraft("test-project").modules([
           ]),
           uString("latitude").attributes([_notEmpty()]),
           uString("longitude").attributes([_notEmpty()]),
+          uEnum("type", "account-type"),
         ])
         .extends(timesamps),
       uModel("vehicle")

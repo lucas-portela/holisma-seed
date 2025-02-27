@@ -23,6 +23,7 @@ import {
   _unique,
   _index,
   _noId,
+  _enum,
 } from "../shortcuts/attributes";
 import path from "path";
 import Case from "case";
@@ -89,15 +90,28 @@ export class TSMongooseSchemaRenderer extends URenderer {
   $fieldDeclaration(field: UField) {
     const type = field.$type() + "";
     let transformedType = this.$fieldType(field);
+    let enumModel: UModel | null = null;
 
     if (type == "nested") {
       const referencedModel = $attr(field, _ref());
-      if (referencedModel) transformedType = this.$schemaName(referencedModel);
+      if (referencedModel) {
+        let enumDefinition = $attr(referencedModel, _enum());
+        if (enumDefinition) {
+          transformedType = Case.pascal(
+            typeof Object.values(enumDefinition)[0]
+          );
+          enumModel = referencedModel;
+        } else transformedType = this.$schemaName(referencedModel);
+      }
     }
 
     let properties = !!$attr(field, _array())
       ? ` type: [${transformedType}],`
       : ` type: ${transformedType},`;
+
+    if (enumModel) {
+      properties += ` enum: ${this._classRenderer.$className(enumModel)},`;
+    }
 
     if (type == "ref-id") {
       const referencedModel = $attr(field, _ref());
@@ -152,7 +166,8 @@ export class TSMongooseSchemaRenderer extends URenderer {
           if (
             referencedModel &&
             !models.some((m) => m.model.$name() === referencedModel.$name()) &&
-            !extraSchemas.includes(referencedModel.$name())
+            !extraSchemas.includes(referencedModel.$name()) &&
+            !$attr(referencedModel, _enum())
           ) {
             models.push({ model: referencedModel, module });
             extraSchemas.push(referencedModel.$name());
@@ -247,16 +262,24 @@ export class TSMongooseSchemaRenderer extends URenderer {
           if (referencedModel) {
             if (!importedSchemas.includes(this.$schemaName(referencedModel))) {
               const isRefId = field.$type() == "ref-id";
+              const enumDefinition = $attr(referencedModel, _enum());
               if (isRefId) disableNoExplicityAny = true;
+
               content = writeToCursor(
                 importCursor,
                 `import { ${
                   isRefId
                     ? this.$modelName(referencedModel)
+                    : enumDefinition
+                    ? this._classRenderer.$className(referencedModel)
                     : this.$schemaName(referencedModel)
                 } } from "${this.$resolveRelativePath(
                   schemaPath.path,
-                  this.$path(this.$key(referencedModel))!.path
+                  (enumDefinition
+                    ? this._classRenderer.$path(
+                        this._classRenderer.$key(referencedModel)
+                      )
+                    : this.$path(this.$key(referencedModel)))!.path
                 ).replace(".ts", "")}";\n`,
                 content
               );

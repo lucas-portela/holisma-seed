@@ -18,6 +18,8 @@ import {
   _required,
   _size,
   _matches,
+  _enum,
+  _ref,
 } from "../shortcuts/attributes";
 
 const KEYS = {
@@ -77,6 +79,7 @@ export class TSClassValidatorRenderer extends URenderer {
     const models = this.$selection().models || [];
 
     models.forEach((model) => {
+      if (!!$attr(model, _enum())) return;
       const modelKey = this._classRenderer.$key(model);
       let content = this.$content(modelKey)?.content || "";
       if (!content) return;
@@ -172,8 +175,16 @@ export class TSClassValidatorRenderer extends URenderer {
           decorator = `@IsNumber(${
             validationOptions ? "{}, " + validationOptions : ""
           })`;
-        else if (field.$type() === "nested")
-          decorator = `@ValidateNested(${validationOptions})`;
+        else if (field.$type() === "nested") {
+          const nestedModel = $attr(field, _ref());
+          if (nestedModel) {
+            if ($attr(nestedModel, _enum())) {
+              decorator = `@IsEnum(${this._classRenderer.$className(
+                nestedModel
+              )}${validationOptions ? ", " + validationOptions : ""})`;
+            } else decorator = `@ValidateNested(${validationOptions})`;
+          }
+        }
 
         if (decorator) {
           importValidator(decorator.match(/@(\w+)/)?.[1]);

@@ -43,6 +43,22 @@ export const _rootModule = attrBuilder<UModule>("root-module");
 
 // General
 export const _array = attrBuilder<boolean>("array", true, false);
+export const _enum = <Type>(enumDefinition?: Record<string, Type>) => {
+  if (enumDefinition) {
+    const firstKey = Object.keys(enumDefinition)[0];
+    const hasReverseMappint =
+      enumDefinition[enumDefinition[firstKey] as any] == firstKey;
+    if (hasReverseMappint) {
+      const newEnumDefinition: Record<string, Type> = {};
+      for (const key in enumDefinition) {
+        if (!isNaN(parseInt(key))) continue;
+        newEnumDefinition[key] = enumDefinition[key];
+      }
+      enumDefinition = newEnumDefinition;
+    }
+  }
+  return uattr("enum", enumDefinition);
+};
 export const _ref = attrBuilder<UModel>("ref");
 export const _defaultValue = <Type>(valueFn?: () => Type) =>
   uattr<string>("default-value", valueFn?.toString());

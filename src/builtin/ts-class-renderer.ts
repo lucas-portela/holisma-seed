@@ -4,7 +4,7 @@ import { $attr } from "../shortcuts/queries";
 import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
 import Case from "case";
 import { closeCursor, writeToCursor } from "../utils/rendering";
-import { _array, _ref, _required } from "../shortcuts/attributes";
+import { _array, _enum, _ref, _required } from "../shortcuts/attributes";
 import path from "path";
 import { UModule } from "../entities/module";
 import { UField } from "../entities/field";
@@ -12,6 +12,7 @@ import { UField } from "../entities/field";
 export class TSClassRenderer extends URenderer {
   private _entityDir = "src/entities";
   private _dtoDir = "src/dtos";
+  private _enumDir = "src/types";
   private _includeModuleInDir = true;
   private _where?: (module: UModule, model: UModel) => boolean;
 
@@ -112,11 +113,12 @@ export class TSClassRenderer extends URenderer {
       if (paths.some((p) => p.key === this.$key(model))) return;
 
       const isDto = !!model.$name().match(/dto$/i);
+      const isEnum = !!$attr(model, _enum());
       paths.push({
         key: this.$key(model),
-        meta: { isDto },
+        meta: { isDto, isEnum },
         path: path.join(
-          isDto ? this._dtoDir : this._entityDir,
+          isDto ? this._dtoDir : isEnum ? this._enumDir : this._entityDir,
           this._includeModuleInDir ? Case.kebab(module.$name()) : "",
           this.$fileName(model)
         ),
@@ -137,47 +139,73 @@ export class TSClassRenderer extends URenderer {
       const modelKey = this.$key(model);
       const modelPath = this.$path(modelKey);
 
-      const fieldCursor = "#field-cursor\n";
-      const importCursor = "#import-cursor\n";
+      if (!modelPath) return;
 
-      const fields = model.$fields();
-      const importedModels: string[] = [];
+      let content = "";
 
-      let content = `${importCursor}export class ${this.$className(
-        model
-      )} {\n${fieldCursor}}`;
+      const enumDefinition = $attr(model, _enum());
+      if (enumDefinition) {
+        const enumCursor = "#enum-cursor\n";
 
-      fields.forEach((field) => {
-        const fieldSignature = this.$fieldSignature(field);
+        content = `export enum ${this.$className(model)} {\n${enumCursor}}`;
 
-        if (field.$type() == "nested") {
-          const nestedModel = $attr(field, _ref());
-          if (nestedModel) {
-            if (!importedModels.includes(this.$className(nestedModel))) {
-              content = writeToCursor(
-                importCursor,
-                this.$resolveImport(modelPath?.path ?? "", nestedModel),
-                content
-              );
-              importedModels.push(this.$className(nestedModel));
+        Object.keys(enumDefinition).forEach((key) => {
+          content = writeToCursor(
+            enumCursor,
+            `  ${key} = ${JSON.stringify(enumDefinition[key])},\n`,
+            content
+          );
+        });
+
+        content = closeCursor(enumCursor, content);
+      } else {
+        const fieldCursor = "#field-cursor\n";
+        const importCursor = "#import-cursor\n";
+
+        const fields = model.$fields();
+        const importedModels: string[] = [];
+
+        content = `${importCursor}export class ${this.$className(
+          model
+        )} {\n${fieldCursor}}`;
+
+        fields.forEach((field) => {
+          const fieldSignature = this.$fieldSignature(field);
+
+          if (field.$type() == "nested") {
+            const nestedModel = $attr(field, _ref());
+            if (nestedModel) {
+              if (!importedModels.includes(this.$className(nestedModel))) {
+                content = writeToCursor(
+                  importCursor,
+                  this.$resolveImport(modelPath.path ?? "", nestedModel),
+                  content
+                );
+                importedModels.push(this.$className(nestedModel));
+              }
             }
           }
-        }
 
-        content = writeToCursor(fieldCursor, `  ${fieldSignature};\n`, content);
-      });
+          content = writeToCursor(
+            fieldCursor,
+            `  ${fieldSignature};\n`,
+            content
+          );
+        });
 
-      if (importedModels.length > 0)
-        content = writeToCursor(importCursor, "\n", content);
+        if (importedModels.length > 0)
+          content = writeToCursor(importCursor, "\n", content);
 
-      content = closeCursor(fieldCursor, content);
-      content = closeCursor(importCursor, content);
+        content = closeCursor(fieldCursor, content);
+        content = closeCursor(importCursor, content);
+      }
 
-      output.push({
-        key: modelKey,
-        content,
-        meta: modelPath?.meta ?? {},
-      });
+      if (content)
+        output.push({
+          key: modelKey,
+          content,
+          meta: modelPath.meta ?? {},
+        });
     });
 
     return output;
