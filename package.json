@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "license": "MIT",
   "scripts": {
-    "cli": "nodemon --watch src src/index.ts"
+    "cli": "nodemon --watch demo-project.yaml --watch src src/index.ts"
   },
   "dependencies": {
     "case": "^1.6.3",

@@ -151,24 +151,28 @@ export class UDraft {
     };
 
     const parseCallSignature = (signature: string) => {
-      const match = signature.match(/\$([^\(]+)\(*([^\)]*)\)*/);
+      const match = signature.trim().match(/^\$([^\(]+)(?:\(*([^\)]*)\))*$/);
       if (!match) return null;
       return {
         fn: match[1].trim(),
-        args: match[2].split(",").map((arg) => arg.trim()),
+        args: (match[2] || "")
+          .split(",")
+          .map((arg) => arg.trim())
+          .filter((v) => !!v),
       };
     };
     const parseFieldSignature = (signature: string) => {
-      const match = signature.match(/([^\(]+)\[([^\)]+)\]/);
+      const match = signature.trim().match(/^([^\(]+)\[([^\)]+)\]$/);
       if (!match) return null;
       return { name: match[1].trim(), type: match[2].trim() };
     };
     const parseFieldAttributeSignature = (signature: string) => {
-      const match = signature.match(/([^\(]+)\(*(.*)\)*/);
+      const match = signature.trim().match(/^([^\(]+)(?:\(*(.+)\))*$/);
       if (!match) return null;
+      if (match[1].match(/[\(\)]/g)) return null;
       return {
         name: match[1].trim(),
-        value: match[2].trim().replace(/\)$/, "") as any,
+        value: (match[2] || "").trim().replace(/\)$/, "") as any,
       };
     };
     const parseModelSignature = (signature: string) => {
@@ -291,7 +295,7 @@ export class UDraft {
             const attrSignature = parseFieldAttributeSignature(attrKey);
             if (!attrSignature)
               throw new ParsingError(
-                `Invalid field attribute inside field ${subModelKey} Model ${modelName}: ${attrKey}`
+                `Invalid field attribute inside field ${subModelKey} from ${modelName} model: ${attrKey}`
               );
             if (attrSignature.value)
               attrSignature.value = eval(attrSignature.value);
