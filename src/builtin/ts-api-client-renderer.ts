@@ -298,7 +298,7 @@ export default class TSApiCLientRenderer extends URenderer {
   async ${methodName}(${methodParams}): Promise<ApiResponse<${outputType}>> {
     try {
       ${outputModel ? "const response = " : ""}await this._client.request(
-        '${processedRoute}',{
+        \`${processedRoute}\`,{
         method: '${method}',${
           contentType ? `\n        contentType: '${contentType}',` : ""
         }${
