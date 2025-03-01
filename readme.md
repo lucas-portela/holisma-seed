@@ -1,6 +1,13 @@
 # uDraft - Write Once, Use Everywhere
 
-uDraft is a declarative code-generation tool that streamlines full-stack development by transforming a single YAML blueprint into production-ready code. By defining models, enums, API endpoints, and validation rules in a structured YAML file, developers can automatically generate classes, database schemas, DTOs, and API infrastructure—eliminating boilerplate code while ensuring consistency across layers. uDraft’s modular renderers interpret the YAML differently to produce framework-specific outputs: generate TypeScript classes with class-validator decorators for Nest.js, Mongoose schemas for MongoDB, or plain models for frontend clients—all from the same source. Its extensible pipeline allows teams to add custom renderers (e.g., for GraphQL, OpenAPI docs, or ORMs) or reuse built-in ones, making it adaptable to any stack. Unlike rigid scaffolding tools, uDraft decouples architecture definitions from implementation details, enabling teams to maintain a single source of truth for their domain logic while effortlessly syncing changes across services, databases, and clients.
+uDraft is a language and stack agnostic code-generation tool that simplifies full-stack development by converting a single YAML file into code for rapid development. In the YAML file, you define models, enums, API endpoints, and validation rules, and uDraft automatically generates classes, database schemas, DTOs, API infrastructure, and even client APIs. This cuts down on repetitive coding and keeps everything consistent.
+
+Using modular renderers, uDraft produces different outputs from the same source. For example, it can create:
+
+TypeScript classes with class-validator decorators for Nest.js
+Mongoose schemas for MongoDB
+Plain models or client APIs for front-end applications
+Its flexible pipeline lets teams add custom renderers (for GraphQL, OpenAPI docs, ORMs, etc.) or use built-in ones. Unlike rigid scaffolding tools, uDraft separates the architecture design from the implementation details, allowing you to maintain one source of truth for your domain logic while easily updating services, databases, and clients.
 
 ## 📜 Core Concepts
 
@@ -161,11 +168,14 @@ draft:
 
 ### Built-in Renderers
 
-| Renderer           | Output                           |
-| ------------------ | -------------------------------- |
-| `TSClassRenderer`  | TypeScript interfaces            |
-| `ClassValidator`   | TypeScript Validation decorators |
-| `MongooseRenderer` | MongoDB schemas                  |
+| Renderer                   | Output                           |
+| -------------------------- | -------------------------------- |
+| `TSClassRenderer`          | TypeScript classes               |
+| `TSClassValidatorRenderer` | TypeScript Validation decorators |
+| `TSMongooseSchemaRenderer` | TypeScript MongoDB schemas       |
+| `TSApiClientRenderer`      | TypeScript API Client With Axios |
+| `DartClassRenderer`        | Dart classes                     |
+| `DartApiClientRenderer`    | Dart API Client With Axios       |
 
 ### Custom Renderer
 
