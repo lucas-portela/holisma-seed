@@ -33,12 +33,16 @@ export const _virtual = attrBuilder<boolean>("virtual", true, false);
 export const _noId = attrBuilder<boolean>("no-id", true, false);
 
 // Modules and Features
-export const _api = attrBuilder<string>("api", "rest");
-export const _httpPath = attrBuilder<string>("http-path", "/");
-export const _httpMethod = attrBuilder<
-  "post" | "get" | "put" | "delete" | "search"
->("http-method", "get");
-export const _urlParam = attrBuilder<UModel>("param");
+export const _http = attrBuilder<{
+  method?: string;
+  url?: string;
+  contentType?: string;
+  noBody?: boolean;
+  params?: { [paramName: string]: string }; // params {<param name>: <input model field name>}
+}>("http", {
+  url: "/",
+  method: "get",
+});
 export const _rootModule = attrBuilder<UModule>("root-module");
 
 // General

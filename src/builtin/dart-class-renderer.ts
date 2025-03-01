@@ -183,6 +183,8 @@ export default class DartClassRenderer extends URenderer {
         const importedModels: string[] = [];
         let fieldDeclarations = "";
         const constructorParams: string[] = [];
+        let fromJsonParams = "";
+        let toJsonAssignments = "";
 
         fields.forEach((field) => {
           const fieldName = this.$fieldName(field);
@@ -208,13 +210,51 @@ export default class DartClassRenderer extends URenderer {
           constructorParams.push(
             `    ${isRequired ? "required " : ""}this.${fieldName},`
           );
+
+          // Build toJson and fromJson parameter
+          const refModel = $attr(field, _ref());
+          const isEnum = refModel ? !!$attr(refModel, _enum()) : false;
+
+          if (!isEnum && field.$type() === "nested") {
+            if ($attr(field, _array())) {
+              fromJsonParams += `      ${fieldName}: (json['${fieldName}'] as List<dynamic>)${
+                !isRequired ? "?" : ""
+              }.map((item) => ${this.$className(
+                $attr(field, _ref()) as UModel
+              )}.fromJson(item as Map<String, dynamic>))${
+                !isRequired ? "?" : ""
+              }.toList(),\n`;
+              toJsonAssignments += `      '${fieldName}': ${fieldName}${
+                !isRequired ? "?" : ""
+              }.map((item) => item.toJson())${
+                !isRequired ? "?" : ""
+              }.toList(),\n`;
+            } else {
+              fromJsonParams += `      ${fieldName}: ${this.$className(
+                $attr(field, _ref()) as UModel
+              )}.fromJson(json['${fieldName}']),\n`;
+              toJsonAssignments += `      '${fieldName}': ${fieldName}${
+                !isRequired ? "?" : ""
+              }.toJson(),\n`;
+            }
+          } else {
+            fromJsonParams += `      ${fieldName}: json['${fieldName}'],\n`;
+            toJsonAssignments += `      '${fieldName}': ${fieldName},\n`;
+          }
         });
 
         const constructor = constructorParams.length
           ? `\n  ${className}({\n${constructorParams.join("\n")}\n  });`
           : "";
 
-        content = `${imports}class ${className} {\n${fieldDeclarations}${constructor}\n}`;
+        content =
+          `${imports}class ${className} {\n${fieldDeclarations}${constructor}\n\n` +
+          `  factory ${className}.fromJson(Map<String, dynamic> json) {\n` +
+          `    return ${className}(\n${fromJsonParams}    );\n` +
+          `  }\n\n` +
+          `  Map<String, dynamic> toJson() {\n` +
+          `    return {\n${toJsonAssignments}    };\n` +
+          `  }\n\n}`;
       }
 
       output.push({

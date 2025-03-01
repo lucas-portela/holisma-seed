@@ -19,7 +19,7 @@ export type RenderPath = {
 export type RenderContent = {
   key: string;
   content: string;
-  meta?: Record<string, string>;
+  meta?: Record<string, any>;
 };
 
 export type PipelineCursor = {

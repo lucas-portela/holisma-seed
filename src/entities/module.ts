@@ -18,11 +18,23 @@ export class UModule {
     return this._name;
   }
 
-  $features() {
+  $features(features?: (UFeature | string)[]) {
+    if (features) {
+      const featureNames = features.map((f) =>
+        typeof f === "string" ? f : f.$name()
+      );
+      return this._features.filter((f) => featureNames.includes(f.$name()));
+    }
     return [...this._features];
   }
 
-  $models() {
+  $models(models?: (UModel | string)[]) {
+    if (models) {
+      const modelNames = models.map((model) =>
+        typeof model === "string" ? model : model.$name()
+      );
+      return this._models.filter((f) => modelNames.includes(f.$name()));
+    }
     return [...this._models];
   }
 

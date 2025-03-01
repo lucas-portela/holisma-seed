@@ -171,14 +171,43 @@ draft:
 
 ```typescript
 // Custom GraphQL Renderer
-class GraphQLRenderer extends BaseRenderer {
-  generateModel(model) {
-    return `type ${model.name} { ${fields} }`;
+class DartClassRenderer extends URenderer {
+  async select(): Promise<RenderSelection> {
+    const models: UModel[] = [];
+    const paths: RenderPath[] = [];
+
+    this.$models().forEach(({ model, module }) => {
+      if (paths.some((p) => p.key === model.$name())) return;
+      models.push(model);
+      paths.push({
+        key: model.$name(),
+        path: `lib/models/${Case.pascal(mode.$name())}.dart`
+        ),
+      });
+    });
+
+    return {
+      models,
+      paths
+    };
+  }
+
+  async render(): Promise<RenderContent[]> {
+    const output: RenderContent[];
+    this.$selection().models.forEach(model=>{
+        let content = this.$content(model.$name());
+        // Implement code generation
+        output.push({
+            key: model.$name(),
+            content: content,
+        })
+    });
+    return output;
   }
 }
 
 // Usage
-UDraft.load("blog.yaml").pipeline([new GraphQLRenderer()]).exec();
+UDraft.load("project.yaml").pipeline([new DartClassRenderer()]).exec();
 ```
 
 ## 📁 Sample Output

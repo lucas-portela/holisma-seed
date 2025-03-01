@@ -7,14 +7,10 @@
   "scripts": {
     "build": "tsc"
   },
-  "author": {
-    "name": "Lucas Portela",
-    "email": "contact@lucasportela.dev",
-    "url": "https://lucasportela.dev"
-  },
+  "author": "Lucas Portela <contact@lucasportela.dev> (https://lucasportela.dev)",
   "repository": {
     "type": "git",
-    "url": "https://github.com/lucas-portela/udraft"
+    "url": "git+https://github.com/lucas-portela/udraft.git"
   },
   "publishConfig": {
     "access": "public"
@@ -29,5 +25,21 @@
     "@types/node": "^22.13.4",
     "@types/terminal-kit": "^2.5.7",
     "typescript": "^5.8.2"
-  }
+  },
+  "keywords": [
+    "Code",
+    "Generation",
+    "Codebase",
+    "Architecture",
+    "Productivity",
+    "Reusability",
+    "Modeling",
+    "Database",
+    "Fullstack"
+  ],
+  "types": "./dist/index.d.ts",
+  "bugs": {
+    "url": "https://github.com/lucas-portela/udraft/issues"
+  },
+  "homepage": "https://github.com/lucas-portela/udraft#readme"
 }

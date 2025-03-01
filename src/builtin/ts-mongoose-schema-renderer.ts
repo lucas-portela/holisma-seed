@@ -1,6 +1,6 @@
 import { UModel } from "../entities/model";
 import { URenderer } from "../entities/renderer";
-import { addPackgeJsonDependency } from "../helpers/json";
+import { addPackageJsonDependency } from "../helpers/package";
 import { $attr } from "../shortcuts/queries";
 import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
 import { closeCursor, writeToCursor } from "../utils/rendering";
@@ -207,7 +207,7 @@ export default class TSMongooseSchemaRenderer extends URenderer {
     const output: RenderContent[] = [
       {
         key: KEYS.packageJson,
-        content: addPackgeJsonDependency(
+        content: addPackageJsonDependency(
           this.$content("packageJson")!.content,
           [
             {

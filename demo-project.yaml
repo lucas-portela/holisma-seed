@@ -1,25 +1,25 @@
 draft:
-  /name: Awesome Project # adding "/" at the start, adds an attribute to the current node, may it be a draft, module, feature or field
+  /name: Awesome Project
   /description: This is an awesome project.
 
-  account-management: # each node imediattelly inside a draft is a module
-    ~account-roles: # inside a module, you can declare a enum by adding "~" at the start of the line
+  account-management:
+    ~account-roles:
       ADMIN: admin
       READ: read
       CREATE: create
       UPDATE: update
 
-    +timestamps: # inside a module, you can declare a model by adding "+" at the start of the line
-      createdAt[date]: # inside a model, you can declare a field by writing the field name followed by the type
-        - required # inside of each field you can delare an array of field attributes
+    +timestamps:
+      createdAt[date]:
+        - required
       updatedAt[date]:
         - required(false)
 
-    +account(timestamps): # you can declare a new model that extends another model by adding "(base-model)" at the end of the line
+    +account(timestamps):
       /schema: accounts
       _id[string]:
         - required(false)
-      name[string]: # The field types can be any of the following: string, number, int, float, date, boolean, date or reference to another model
+      name[string]:
         - required
         - notEmpty
       passwordHash[string]:
@@ -28,13 +28,45 @@ draft:
         - unique
         - notEmpty
         - regex(/.+@.+\..+/)
-      roles[account-roles]: # when nesting a model as a field, you can simply add the model name as the type
+      roles[account-roles]:
         - array
-        - required(false)
 
+    +account-response-dto(account):
+      $remove:
+        - _id
+        - passwordHash
+      $pick(account):
+        - _id > id
+
+    /http: { url: /account }
+    signup:
+      /http:
+        {
+          method: post,
+          url: "/signup/{id}",
+          params: { id: email },
+          noBody: true,
+        }
+      input:
+        +create-account-dto:
+          $pick(account):
+            - name
+            - email
+            - passwordHash > password
+      output:
+        +create-account-response-dto:
+          success[boolean]:
+            - required
+          account[account-response-dto]:
+            - required(false)
+    signout:
+      /http: { method: post, url: /signout }
+      output: account-response-dto
+
+  vehicle:
     +vehicle(timestamps):
       /schema: vehicles
-      owner[&account]: # when referencing another model as a field, instead of nesting , you can add "&" at the start of the type and it means the field actually stores an ID to the referenced model
+      owner[&account]:
         - required
       make[string]:
         - required
@@ -46,30 +78,6 @@ draft:
         - required
         - min(1900)
         - max(2020)
-
-    +account-response-dto(account):
-      $remove: # you can remove fields from a model by adding "$remove" at the start of the line
-        - _id
-        - passwordHash
-        - createdAt
-      $pick(account):
-        - _id > id
-
-    /http: { url: /account }
-    signup: # inside a module, when a node is not a model, enum or attribute it is atutomatically considered a feature
-      /http: { method: post, url: /signup }
-      input: # you can define the input and output of a feature by adding "input" and "output" nodes
-        +create-account-dto:
-          $pick(account): # instead of redeclaring some fields you can pick fields from an existing model by adding "$pick(model)" at the start of the line
-            - name
-            - email
-            - passwordHash > password # you can rename fields by adding "oldName > newName" when picking fields from another model
-      output: # you can define the output of a feature by adding "output" node
-        +create-account-response-dto:
-          success[boolean]:
-            - required
-          account[account-response-dto]:
-            - required(false)
-    signout:
-      /http: { method: post, url: /signout }
-      output: account-response-dto # you can reference a model by its name in a feature input/output instead of declaring a new model
+    +vehicle-response-dto(vehicle):
+      ownerData[account-response-dto]:
+        - array

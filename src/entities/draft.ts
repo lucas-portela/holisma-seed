@@ -286,7 +286,8 @@ export class UDraft {
           }
 
           const field = new UField(signature.name, signature.type);
-          subModelData.forEach((attrKey: string) => {
+
+          (subModelData || []).forEach((attrKey: string) => {
             const attrSignature = parseFieldAttributeSignature(attrKey);
             if (!attrSignature)
               throw new ParsingError(
