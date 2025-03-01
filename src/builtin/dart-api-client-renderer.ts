@@ -252,14 +252,7 @@ export default class DartApiClientRenderer extends URenderer {
           inputType = inputClassName;
 
           const inputVar = Case.camel(inputModel.$name());
-          if (contentType === "multipart/form-data") {
-            dataCode = `data: FormData.fromMap(${inputVar}.toJson()),`;
-            if (!imports.includes('import "package:dio/dio.dart";')) {
-              imports = `import "package:dio/dio.dart";\n${imports}`;
-            }
-          } else {
-            dataCode = `data: ${inputVar}.toJson(),`;
-          }
+          dataCode = `data: ${inputVar}.toJson(),`;
         }
 
         // Handle output model

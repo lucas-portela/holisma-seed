@@ -37,26 +37,17 @@ export default class TSClassRenderer extends URenderer {
   }
 
   $resolveImport(from: string, model: UModel): string {
-    if (!this.$selection().paths) return "";
     const modelPath = this.$path(this.$className(model));
-    if (!modelPath) return "";
+    if (!modelPath?.path) return "";
 
-    const fromParts = from.split("/").slice(0, -1);
-    const toParts = modelPath.path.split("/").slice(0, -1);
-    for (let i = 0; i < fromParts.length; i++) {
-      if (fromParts.slice(0, i).join("/") !== toParts.slice(0, i).join("/")) {
-        let returns = "";
-        for (let j = 0; j <= fromParts.length - i; j++) returns += "../";
+    const fromDir = path.dirname(from);
+    const toDir = path.dirname(modelPath.path);
+    const relativePath = path.relative(fromDir, toDir);
+    const fileName = this.$fileName(model, false);
+    const importPath = path.join(relativePath, fileName);
+    const normalizedPath = importPath.split(path.sep).join("/");
 
-        return `import { ${this.$className(model)} } from "${returns}${toParts
-          .slice(i - 1)
-          .join("/")}/${this.$fileName(model, false)}";\n`;
-      }
-    }
-    return `import { ${this.$className(model)} } from "./${this.$fileName(
-      model,
-      false
-    )}";\n`;
+    return `import { ${this.$className(model)} } from '${normalizedPath}';\n`;
   }
 
   $key(model: UModel) {
@@ -163,13 +154,15 @@ export default class TSClassRenderer extends URenderer {
       } else {
         const fieldCursor = "#field-cursor\n";
         const importCursor = "#import-cursor\n";
-
-        const fields = model.$fields();
-        const importedModels: string[] = [];
+        const fromJsonCursor = "#from-json-cursor\n";
+        const toJsonCursor = "#to-json-cursor\n";
 
         content = `${importCursor}export class ${this.$className(
           model
-        )} {\n${fieldCursor}}`;
+        )} {\n${fieldCursor}${fromJsonCursor}${toJsonCursor}\n}`;
+
+        const fields = model.$fields();
+        const importedModels: string[] = [];
 
         fields.forEach((field) => {
           const fieldSignature = this.$fieldSignature(field);
@@ -195,11 +188,57 @@ export default class TSClassRenderer extends URenderer {
           );
         });
 
+        let fromJsonMethod = `  static fromJson(json: Record<string, any>): ${this.$className(
+          model
+        )} {\n    const instance = new ${this.$className(model)}();\n`;
+        let toJsonMethod = `  toJson(): Record<string, any> {\n    return {\n`;
+        fields.forEach((field) => {
+          const fieldName = this.$fieldName(field);
+          const type = field.$type();
+
+          if (type === "date") {
+            // For Date fields, assume the JSON value is an ISO string.
+            fromJsonMethod += `      if(json.${fieldName}) instance.${fieldName} =  new Date(json.${fieldName});\n`;
+            toJsonMethod += `      ${fieldName}: this.${fieldName} ? this.${fieldName}.toISOString() : undefined,\n`;
+          } else if (type === "nested") {
+            // For nested objects, call the nested type's fromJson/toJson.
+            const nestedModel = $attr(field, _ref());
+            const isEnum = !nestedModel || !!$attr(nestedModel, _enum());
+            if (nestedModel && !isEnum) {
+              if ($attr(field, _array())) {
+                // Nested array: map each item.
+                fromJsonMethod += `      if(json.${fieldName}) instance.${fieldName} =json.${fieldName}.map((item: any) => ${this.$className(
+                  nestedModel
+                )}.fromJson(item));\n`;
+                toJsonMethod += `      ${fieldName}: this.${fieldName} ? this.${fieldName}.map((item: any) => item.toJson()) : undefined,\n`;
+              } else {
+                // Single nested object.
+                fromJsonMethod += `      if(json.${fieldName}) instance.${fieldName} = ${this.$className(
+                  nestedModel
+                )}.fromJson(json.${fieldName});\n`;
+                toJsonMethod += `      ${fieldName}: this.${fieldName} ? this.${fieldName}.toJson() : undefined,\n`;
+              }
+            }
+          } else {
+            // For primitives and other types, assign directly.
+            fromJsonMethod += `      instance.${fieldName} = json.${fieldName};\n`;
+            toJsonMethod += `      ${fieldName}: this.${fieldName},\n`;
+          }
+        });
+
+        fromJsonMethod += `      return instance;\n  }\n`;
+        toJsonMethod += `    };\n  }\n`;
+
+        content = writeToCursor(fromJsonCursor, fromJsonMethod, content);
+        content = writeToCursor(toJsonCursor, toJsonMethod, content);
+
         if (importedModels.length > 0)
           content = writeToCursor(importCursor, "\n", content);
 
         content = closeCursor(fieldCursor, content);
         content = closeCursor(importCursor, content);
+        content = closeCursor(fromJsonCursor, content);
+        content = closeCursor(toJsonCursor, content);
       }
 
       if (content)
