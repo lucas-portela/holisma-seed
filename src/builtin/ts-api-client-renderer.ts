@@ -4,82 +4,93 @@ import { UFeature } from "../entities/feature";
 import { UModel } from "../entities/model";
 import { UModule } from "../entities/module";
 import { URenderer } from "../entities/renderer";
-import { addPubspecDependency } from "../helpers/package";
 import { $attr } from "../shortcuts/queries";
 import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
-import { closeCursor, writeToCursor } from "../utils/rendering";
-import DartClassRenderer from "./dart-class-renderer";
-import { attrBuilder } from "../helpers/builders";
 import { _http } from "../shortcuts/attributes";
+import TSClassRenderer from "./ts-class-renderer";
+import { addPackageJsonDependency } from "../helpers/package";
 
-const KEYS = {
-  pubspec: "pubspec",
-  baseApiClient: "ApiClient",
-};
-
+// Default Axios-based API client code for TypeScript
 const DEFAULT_API_CLIENT_CODE = `
-import 'package:dio/dio.dart';
+import { AxiosInstance, AxiosRequestConfig, AxiosError } from 'axios';
 
-class ApiClient {
-  final Dio dio;
+export class ApiClient {
+  private axiosInstance: AxiosInstance;
 
-  ApiClient({required this.dio});
+  constructor(axiosInstance: AxiosInstance) {
+    this.axiosInstance = axiosInstance;
+  }
 
-  Future<dynamic> request(
-    String path, {
-    required String method,
-    String? contentType,
-    Map<String, dynamic>? queryParameters,
-    dynamic data,
-  }) async {
+  async request(
+    path: string,
+    options: {
+      method: string,
+      contentType?: string,
+      queryParameters?: any,
+      data?: any,
+    }
+  ): Promise<any> {
     try {
-      final response = await dio.request(
-        path,
-        options: Options(
-          method: method,
-          contentType: contentType,
-        ),
-        queryParameters: queryParameters,
-        data: data,
-      );
+      const config: AxiosRequestConfig = {
+        url: path,
+        method: options.method.toLowerCase() as any,
+        headers: options.contentType ? { 'Content-Type': options.contentType } : undefined,
+        params: options.queryParameters,
+        data: options.data,
+      };
+      const response = await this.axiosInstance.request(config);
       return response.data;
-    } on DioException catch (e) {
-      throw ApiException(
-        code: e.response?.statusCode,
-        message: e.message ?? 'Unknown error',
-      );
+    } catch (error: any) {
+      if (error && error.response) {
+        throw new ApiException(error.response.status, error.message || 'Unknown error');
+      }
+      throw error;
     }
   }
 }
 
-class ApiResponse<T> {
-  final T? data;
-  final String? error;
-  final int? statusCode;
+export class ApiResponse<T> {
+  data?: T;
+  error?: string;
+  statusCode?: number;
 
-  ApiResponse.success(this.data)
-    : statusCode = 200, error = null;
+  private constructor(data?: T, error?: string, statusCode?: number) {
+    this.data = data;
+    this.error = error;
+    this.statusCode = statusCode;
+  }
 
-  ApiResponse.error({this.statusCode, String? message})
-    : data = null, error = message ?? 'Unknown error';
+  static success<T>(data: T): ApiResponse<T> {
+    return new ApiResponse<T>(data, undefined, 200);
+  }
 
-  bool get isSuccess => error == null;
+  static error<T>(statusCode?: number, message?: string): ApiResponse<T> {
+    return new ApiResponse<T>(undefined, message || 'Unknown error', statusCode);
+  }
+
+  get isSuccess(): boolean {
+    return this.error === undefined;
+  }
 }
 
-class ApiException implements Exception {
-  final int? code;
-  final String message;
-
-  ApiException({this.code, required this.message});
-
-  @override
-  String toString() => message;
+export class ApiException extends Error {
+  code?: number;
+  constructor(code: number | undefined, message: string) {
+    super(message);
+    this.code = code;
+    Object.setPrototypeOf(this, ApiException.prototype);
+  }
 }
 `.trim();
 
-export default class DartApiClientRenderer extends URenderer {
-  private _serviceDir = "lib/apis";
-  private _baseClientPath = "lib/core/api_client.dart";
+const KEYS = {
+  packageJson: "packageJson",
+  baseApiClient: "ApiClient",
+};
+
+export default class TSApiCLientRenderer extends URenderer {
+  private _serviceDir: string = "src/apis";
+  private _baseClientPath: string = "src/core/api-client.ts";
   private _where?: (module: UModule, feature: UFeature) => boolean;
 
   constructor(options?: {
@@ -98,7 +109,7 @@ export default class DartApiClientRenderer extends URenderer {
   }
 
   $fileName(module: UModule, extension = true) {
-    return `${Case.snake(module.$name())}_api${extension ? ".dart" : ""}`;
+    return `${Case.kebab(module.$name())}-api${extension ? ".ts" : ""}`;
   }
 
   private resolveFeatureRoute(module: UModule, feature: UFeature): string {
@@ -128,7 +139,7 @@ export default class DartApiClientRenderer extends URenderer {
     });
 
     const paths: RenderPath[] = [
-      { key: KEYS.pubspec, path: "pubspec.yaml" },
+      { key: KEYS.packageJson, path: "package.json" },
       {
         key: KEYS.baseApiClient,
         path: this._baseClientPath,
@@ -156,10 +167,10 @@ export default class DartApiClientRenderer extends URenderer {
   async render(): Promise<RenderContent[]> {
     const output: RenderContent[] = [
       {
-        key: KEYS.pubspec,
-        content: addPubspecDependency(
-          this.$content(KEYS.pubspec)?.content || "",
-          [{ name: "dio", version: "^5.4.0" }]
+        key: KEYS.packageJson,
+        content: addPackageJsonDependency(
+          this.$content(KEYS.packageJson)?.content || "",
+          [{ name: "axios", version: "^1.4.0" }]
         ),
       },
     ];
@@ -184,28 +195,30 @@ export default class DartApiClientRenderer extends URenderer {
 
       const serviceName = this.$moduleServiceName(module);
       const modulePath = this.$path(serviceName);
-      const dartClassRenderer = this.$seed().$requireRenderer(
+      const tsClassRenderer = this.$seed().$requireRenderer(
         this,
-        DartClassRenderer
+        TSClassRenderer
       );
 
       if (!modulePath) continue;
 
-      let imports = `import "${this.$resolveRelativePath(
+      let imports = `import { ApiClient, ApiResponse, ApiException } from "${this.$resolveRelativePath(
         modulePath.path,
         baseApiClientPath?.path + ""
-      )}";`;
+      ).replace(/\.ts$/, "")}";`;
       let importedModels: string[] = [];
       let methods: string[] = [];
 
       const importModel = (model: UModel) => {
-        const modelKey = dartClassRenderer.$key(model);
-        const modelPath = dartClassRenderer.$path(modelKey)?.path;
+        const modelKey = tsClassRenderer.$key(model);
+        const modelPath = tsClassRenderer.$path(modelKey)?.path;
         if (importedModels.includes(modelKey)) return;
-        imports += `\nimport "${this.$resolveRelativePath(
+        imports += `\nimport { ${tsClassRenderer.$className(
+          model
+        )} } from "${this.$resolveRelativePath(
           modulePath.path,
           modelPath + ""
-        )}";`;
+        ).replace(/\.ts$/, "")}";`;
       };
 
       features.forEach((feature) => {
@@ -233,9 +246,9 @@ export default class DartApiClientRenderer extends URenderer {
           )
           .map(
             (field) =>
-              `'${dartClassRenderer.$fieldName(field)}': ${Case.camel(
+              `'${tsClassRenderer.$fieldName(field)}': ${Case.camel(
                 inputModel?.$name() + ""
-              )}.${dartClassRenderer.$fieldName(field)}`
+              )}.${tsClassRenderer.$fieldName(field)}`
           );
         const queryParamsCode =
           queryParamEntries.length > 0
@@ -247,7 +260,7 @@ export default class DartApiClientRenderer extends URenderer {
         let inputType = "void";
         let dataCode = "";
         if (inputModel) {
-          const inputClassName = dartClassRenderer.$className(inputModel);
+          const inputClassName = tsClassRenderer.$className(inputModel);
           importModel(inputModel);
           inputType = inputClassName;
 
@@ -265,14 +278,14 @@ export default class DartApiClientRenderer extends URenderer {
         // Handle output model
         let outputType = "void";
         if (outputModel) {
-          const outputClassName = dartClassRenderer.$className(outputModel);
+          const outputClassName = tsClassRenderer.$className(outputModel);
           importModel(outputModel);
           outputType = outputClassName;
         }
 
         // Build method parameters
         const methodParams = inputModel
-          ? `${inputType} ${Case.camel(inputModel.$name())}`
+          ? `${Case.camel(inputModel.$name())}: ${inputType} `
           : "";
 
         const sendQuery =
@@ -282,26 +295,25 @@ export default class DartApiClientRenderer extends URenderer {
 
         // Build method implementation
         methods.push(`
-  Future<ApiResponse<${outputType}>> ${methodName}(${methodParams}) async {
+  async ${methodName}(${methodParams}): Promise<ApiResponse<${outputType}>> {
     try {
-      ${outputModel ? "final response = " : ""}await client.request(
-        '${processedRoute}',
+      ${outputModel ? "const response = " : ""}await this._client.request(
+        '${processedRoute}',{
         method: '${method}',${
           contentType ? `\n        contentType: '${contentType}',` : ""
         }${
           sendQuery && queryParamsCode ? `\n        ${queryParamsCode},` : ""
         }${!sendQuery ? `\n        ${dataCode}` : ""}
-      );
+      });
       return ApiResponse.success(${
         outputModel
-          ? `${dartClassRenderer.$className(outputModel)}.fromJson(response)`
+          ? `${tsClassRenderer.$className(outputModel)}.fromJson(response)`
           : "null"
       });
-    } on ApiException catch (e) {
-      return ApiResponse.error(
-        statusCode: e.code,
-        message: e.message,
-      );
+    } catch (e) {
+      if(e instanceof ApiException) 
+        return ApiResponse.error(e.code, e.message);
+      else throw e;
     }
   }`);
       });
@@ -309,15 +321,13 @@ export default class DartApiClientRenderer extends URenderer {
       const content = `
 ${imports}
 
-class ${serviceName} {
-  final ApiClient client;
-
-  ${serviceName}({
-    required this.client,
-  });
+export default class ${serviceName} {
+  constructor(
+    private _client: ApiClient,
+  ){}
 ${methods.join("\n")}
 }
-      `.trim();
+          `.trim();
 
       output.push({
         key: serviceName,
