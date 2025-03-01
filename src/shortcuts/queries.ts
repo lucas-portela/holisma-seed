@@ -6,7 +6,7 @@ import { UModule } from "../entities/module";
 import { UDraft } from "../entities/draft";
 
 export const $attr = <Type>(
-  root: UModule | UFeature | UModel | UField,
+  root: UDraft | UModule | UFeature | UModel | UField,
   name: string | UAttribute<Type>
 ) => {
   const attribute = typeof name != "string" ? name : null;
@@ -14,12 +14,12 @@ export const $attr = <Type>(
   const foundAttr = root.$attributes().find((attr) => attr.$name() == name);
 
   if (!foundAttr) {
-    if (attribute) {
-      return attribute.$default() ?? null;
-    }
+    if (attribute) return attribute.$default() ?? null;
     return null;
   }
-  return foundAttr.$value() as Type;
+  return foundAttr.$value() === null
+    ? attribute?.$value() ?? null
+    : (foundAttr.$value() as Type);
 };
 
 export const $modules = (

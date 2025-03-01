@@ -40,13 +40,6 @@ export class UFeature {
     return this._output;
   }
 
-  extends(feature: UFeature) {
-    this.attributes(feature.$attributes());
-    if (feature._input) this.input(feature._input);
-    if (feature._output) this.output(feature._output);
-    return this;
-  }
-
   input(model: UModel) {
     this._input = model;
     return this;

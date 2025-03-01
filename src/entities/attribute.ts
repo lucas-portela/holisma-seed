@@ -13,7 +13,7 @@ export class UAttribute<Type> {
   }
 
   $value() {
-    return this._value ?? this._defaultValue;
+    return this._value ?? this._defaultValue ?? null;
   }
 
   $default() {

@@ -7,16 +7,16 @@ import { uattr } from "./entities";
 export const _required = attrBuilder<boolean>("required", true, true);
 export const _min = attrBuilder<number>("min", 0);
 export const _max = attrBuilder<number>("max", Number.MAX_SAFE_INTEGER);
-export const _minLength = attrBuilder<number>("min-length", 0);
+export const _minLength = attrBuilder<number>("minLength", 0);
 export const _maxLength = attrBuilder<number>(
   "max-length",
   Number.MAX_SAFE_INTEGER
 );
 export const _size = attrBuilder<number>("length");
 export const _notEmpty = attrBuilder<boolean>("notEmpty", true, false);
-export const _notInArray = attrBuilder<any[]>("not-in");
-export const _inArray = attrBuilder<any[]>("in");
-export const _matches = attrBuilder<RegExp>("regex");
+export const _notIn = attrBuilder<any[]>("notIn");
+export const _in = attrBuilder<any[]>("in");
+export const _regex = attrBuilder<RegExp>("regex");
 
 // Sanitization
 export const _trim = attrBuilder<boolean>("trim", true, false);

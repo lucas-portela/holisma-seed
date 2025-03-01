@@ -26,6 +26,10 @@ export class UModule {
     return [...this._models];
   }
 
+  $attributes() {
+    return [...this._attributes];
+  }
+
   $attribute<Type>(attribute: UAttribute<Type>) {
     const a = this._attributes.find(
       (attr) => attr.$name() == attribute.$name()
@@ -36,10 +40,6 @@ export class UModule {
   $attributeValue(name: string) {
     const a = this._attributes.find((attr) => attr.$name() == name);
     return a ? a.$value() : undefined;
-  }
-
-  $attributes() {
-    return this._attributes;
   }
 
   $where(clause: (module: UFeature) => boolean) {
@@ -68,12 +68,6 @@ export class UModule {
       feature.attributes([_rootModule(this)]);
     });
     return this;
-  }
-
-  extends(module: UModule) {
-    return this.features(module.$features())
-      .attributes(module.$attributes())
-      .models(module.$models());
   }
 
   remove(features: UFeature[]) {

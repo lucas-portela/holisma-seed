@@ -2,9 +2,9 @@ import { UAttribute } from "./attribute";
 
 export class UField {
   private _name: string;
-  private _type?: string;
+  private _type: string;
   private _attributes: UAttribute<any>[] = [];
-  constructor(name: string, type?: string) {
+  constructor(name: string, type: string) {
     this._name = name;
     this._type = type;
   }
@@ -28,15 +28,14 @@ export class UField {
     return [...this._attributes];
   }
 
+  $clone(name: string) {
+    return new UField(name, this.$type()).attributes(this.$attributes());
+  }
+
   attributes(attributes: UAttribute<any>[]) {
     this.remove(attributes);
     this._attributes = this._attributes.concat(attributes);
     return this;
-  }
-
-  extends(field: UField) {
-    if (!this._type) this._type = field._type;
-    return this.attributes(field.$attributes());
   }
 
   remove(attributes: UAttribute<any>[]) {

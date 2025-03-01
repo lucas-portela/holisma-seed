@@ -83,14 +83,16 @@ export class TSClassRenderer extends URenderer {
   }
 
   $fieldName(field: UField) {
+    let nameParts = field.$name().match(/([^A-Za-z]+)(.+)/);
+    if (nameParts) return nameParts[1] + Case.camel(nameParts[2]);
     return Case.camel(field.$name());
   }
 
   $fieldType(field: UField) {
     let type = field.$type() + "";
     if (type === "date") type = "Date";
-    else if (type === "ref-id") type = "string";
-    else if (["interger", "float"].includes(type)) type = "number";
+    else if (type === "reference") type = "string";
+    else if (["int", "float"].includes(type)) type = "number";
     return type;
   }
 

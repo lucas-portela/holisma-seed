@@ -92,7 +92,7 @@ export class URenderer {
             }
             foundModels.push(model);
             model.$fields().forEach((field) => {
-              if (field.$type() == "nested" || field.$type() == "ref-id") {
+              if (field.$type() == "nested" || field.$type() == "reference") {
                 const referencedModel = $attr(field, _ref());
                 if (referencedModel) deepSearch(referencedModel);
               }

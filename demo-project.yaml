@@ -1,0 +1,73 @@
+draft:
+  /name: Awesome Project
+  /description: This is an awesome project.
+  account-management:
+    ~account-type:
+      ADMIN: admin
+      MANAGER: manager
+      GUEST: guest
+
+    +timestamps:
+      createdAt[date]:
+        - required
+      updatedAt[date]:
+        - required(false)
+
+    +account(timestamps):
+      /schema: accounts
+      _id[string]:
+        - required(false)
+      name[string]:
+        - required
+        - notEmpty
+      passwordHash[string]:
+        - notEmpty
+      email[string]:
+        - unique
+        - notEmpty
+        - regex(/.+@.+\..+/)
+      type[account-type]:
+        - array
+        - required(false)
+
+    +vehicle(timestamps):
+      /schema: vehicles
+      owner[&account]:
+        - required
+      make[string]:
+        - required
+        - notEmpty
+      model[string]:
+        - required
+        - notEmpty
+      year[int]:
+        - required
+        - min(1900)
+        - max(2020)
+
+    +account-response-dto(account):
+      $remove:
+        - _id
+        - passwordHash
+        - createdAt
+      $pick(account):
+        - _id > id
+
+    /http: { url: /account }
+    signup:
+      /http: { method: post, url: /signup }
+      input:
+        +create-account-dto:
+          $pick(account):
+            - name
+            - email
+            - passwordHash > password
+      output:
+        +create-account-response-dto:
+          success[boolean]:
+            - required
+          account[account-response-dto]:
+            - required(false)
+    signout:
+      /http: { method: post, url: /signout }
+      output: account-response-dto

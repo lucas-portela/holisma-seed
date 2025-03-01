@@ -8,16 +8,16 @@ import { UModule } from "../entities/module";
 import { TSClassRenderer } from "./ts-class-renderer";
 import {
   _array,
-  _inArray,
+  _in,
   _max,
   _maxLength,
   _min,
   _minLength,
   _notEmpty,
-  _notInArray,
+  _notIn,
   _required,
   _size,
-  _matches,
+  _regex,
   _enum,
   _ref,
 } from "../shortcuts/attributes";
@@ -127,11 +127,11 @@ export class TSClassValidatorRenderer extends URenderer {
             value: (val: number) => `@Length(${val})`,
           },
           {
-            attr: _inArray(),
+            attr: _in(),
             value: (val: any[]) => `@IsIn(${JSON.stringify(val)})`,
           },
           {
-            attr: _notInArray(),
+            attr: _notIn(),
             value: (val: any[]) => `@IsNotIn(${JSON.stringify(val)})`,
           },
           {
@@ -139,12 +139,13 @@ export class TSClassValidatorRenderer extends URenderer {
             value: (val: boolean) => (val === true ? `@IsArray()` : ""),
           },
           {
-            attr: _matches(),
+            attr: _regex(),
             value: (val: RegExp) => `@Matches(${val.toString()})`,
           },
         ];
 
         for (let attribute of attributes) {
+          // if (attribute.attr.$name() == "array") debugger;
           const value = $attr<any>(field, attribute.attr);
           if (value !== null) {
             const decorator = (attribute.value as any)(value);
@@ -169,7 +170,7 @@ export class TSClassValidatorRenderer extends URenderer {
           decorator = `@IsBoolean(${validationOptions})`;
         else if (field.$type() === "date")
           decorator = `@IsDate(${validationOptions})`;
-        else if (field.$type() === "integer")
+        else if (field.$type() === "int")
           decorator = `@IsInt(${validationOptions})`;
         else if (field.$type() === "float")
           decorator = `@IsNumber(${

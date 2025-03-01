@@ -8,22 +8,23 @@ import { UModule } from "../entities/module";
 import { TSClassRenderer } from "./ts-class-renderer";
 import {
   _array,
-  _inArray,
+  _in,
   _max,
   _maxLength,
   _min,
   _minLength,
   _notEmpty,
-  _notInArray,
+  _notIn,
   _required,
   _size,
-  _matches,
+  _regex,
   _schema,
   _ref,
   _unique,
   _index,
   _noId,
   _enum,
+  _virtual,
 } from "../shortcuts/attributes";
 import path from "path";
 import Case from "case";
@@ -82,8 +83,8 @@ export class TSMongooseSchemaRenderer extends URenderer {
 
   $fieldType(field: UField) {
     let type = field.$type() + "";
-    if (type == "ref-id") return "mongoose.Schema.ObjectId as any";
-    if (["interger", "float"].includes(type)) return "Number";
+    if (type == "reference") return "mongoose.Schema.ObjectId as any";
+    if (["int", "float"].includes(type)) return "Number";
     if (type !== "nested") return Case.pascal(type);
   }
 
@@ -113,7 +114,7 @@ export class TSMongooseSchemaRenderer extends URenderer {
       properties += ` enum: ${this._classRenderer.$className(enumModel)},`;
     }
 
-    if (type == "ref-id") {
+    if (type == "reference") {
       const referencedModel = $attr(field, _ref());
       if (referencedModel) {
         const schema = $attr(referencedModel, _schema());
@@ -140,10 +141,10 @@ export class TSMongooseSchemaRenderer extends URenderer {
       addProperty("minlength", $attr(field, _minLength()));
     if ($attr(field, _maxLength()) !== null)
       addProperty("maxlength", $attr(field, _maxLength()));
-    if (!!$attr(field, _inArray()))
-      addProperty("enum", JSON.stringify($attr(field, _inArray())));
-    if (!!$attr(field, _matches()))
-      addProperty("match", $attr(field, _matches())!.toString());
+    if (!!$attr(field, _in()))
+      addProperty("enum", JSON.stringify($attr(field, _in())));
+    if (!!$attr(field, _regex()))
+      addProperty("match", $attr(field, _regex())!.toString());
 
     return `  ${this.$fieldName(field)}: {${properties.replace(/,$/, "")} },\n`;
   }
@@ -161,7 +162,7 @@ export class TSMongooseSchemaRenderer extends URenderer {
 
     models.forEach(({ model, module }) => {
       model.$fields().forEach((field) => {
-        if (["nested", "ref-id"].includes(field.$type() + "")) {
+        if (["nested", "reference"].includes(field.$type() + "")) {
           const referencedModel = $attr(field, _ref());
           if (
             referencedModel &&
@@ -255,13 +256,14 @@ export class TSMongooseSchemaRenderer extends URenderer {
 
       fields.forEach((field) => {
         const fieldDeclaration = this.$fieldDeclaration(field);
+        if (field.$name() == "_id" || $attr(field, _virtual())) return;
 
-        if (["nested", "ref-id"].includes(field.$type() + "")) {
+        if (["nested", "reference"].includes(field.$type() + "")) {
           const referencedModel = $attr(field, _ref());
 
           if (referencedModel) {
             if (!importedSchemas.includes(this.$schemaName(referencedModel))) {
-              const isRefId = field.$type() == "ref-id";
+              const isRefId = field.$type() == "reference";
               const enumDefinition = $attr(referencedModel, _enum());
               if (isRefId) disableNoExplicityAny = true;
 
