@@ -1,11 +1,11 @@
+import * as Case from "case";
+import * as path from "path";
 import { UModel } from "../entities/model";
 import { URenderer } from "../entities/renderer";
 import { $attr } from "../shortcuts/queries";
 import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
-import Case from "case";
 import { closeCursor, writeToCursor } from "../utils/rendering";
 import { _array, _enum, _ref, _required } from "../shortcuts/attributes";
-import path from "path";
 import { UModule } from "../entities/module";
 import { UField } from "../entities/field";
 

@@ -26,10 +26,10 @@ import {
   _enum,
   _virtual,
 } from "../shortcuts/attributes";
-import path from "path";
-import Case from "case";
 import { UField } from "../entities/field";
 import { MissingAttributeError } from "../errors/missing-attribute-error";
+import * as path from "path";
+import * as Case from "case";
 
 const KEYS = {
   packageJson: "packageJson",

@@ -1,9 +1,23 @@
 {
-  "name": "udraft",
+  "name": "@udraft/core",
   "version": "1.0.0",
   "license": "MIT",
+  "main": "dist/index.js",
+  "description": "uDraft is a declarative code-generation tool that streamlines full-stack development by transforming a single YAML blueprint into production-ready code. By defining models, enums, API endpoints, and validation rules in a structured YAML file, developers can automatically generate classes, database schemas, DTOs, and API infrastructure—eliminating boilerplate code while ensuring consistency across layers.",
   "scripts": {
-    "cli": "nodemon --watch demo-project.yaml --watch src src/index.ts"
+    "build": "tsc"
+  },
+  "author": {
+    "name": "Lucas Portela",
+    "email": "contact@lucasportela.dev",
+    "url": "https://lucasportela.dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/lucas-portela/udraft"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "dependencies": {
     "case": "^1.6.3",
@@ -13,6 +27,7 @@
   },
   "devDependencies": {
     "@types/node": "^22.13.4",
-    "@types/terminal-kit": "^2.5.7"
+    "@types/terminal-kit": "^2.5.7",
+    "typescript": "^5.8.2"
   }
 }

@@ -1,24 +1,19 @@
+import * as fs from "fs";
+import * as path from "path";
 import { cwd } from "process";
 import { PipelineCursor, RenderContent, RenderPath } from "../types/renderer";
 import { UModule } from "./module";
 import { URenderer } from "./renderer";
-import fs from "fs";
-import path from "path";
-import { pipeline } from "stream";
 import { RendererRequiredError } from "../errors/renderer-required-error";
-import { MissingAttributeError } from "../errors/missing-attribute-error";
 import { terminal as term } from "terminal-kit";
 import { UDraftError } from "../errors/udraft-error";
-import Case from "case";
 import { parseDocument } from "yaml";
 import { UModel } from "./model";
 import { UFeature } from "./feature";
 import { UAttribute } from "./attribute";
-import { uEnum } from "../shortcuts/fields";
 import { _enum, _ref } from "../shortcuts/attributes";
 import { UField } from "./field";
 import { ParsingError } from "../errors/parsing-error";
-import { string } from "yaml/dist/schema/common/string";
 import { $attr } from "../shortcuts/queries";
 
 export class UDraft {
