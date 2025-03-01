@@ -177,67 +177,60 @@ draft:
 | `DartClassRenderer`        | Dart classes                     |
 | `DartApiClientRenderer`    | Dart API Client With Axios       |
 
-### Custom Renderer
+### Using a Renderer
 
 ```typescript
-// Custom GraphQL Renderer
-class DartClassRenderer extends URenderer {
-  async select(): Promise<RenderSelection> {
-    const models: UModel[] = [];
-    const paths: RenderPath[] = [];
-
-    this.$models().forEach(({ model, module }) => {
-      if (paths.some((p) => p.key === model.$name())) return;
-      models.push(model);
-      paths.push({
-        key: model.$name(),
-        path: `lib/models/${Case.pascal(mode.$name())}.dart`
-        ),
-      });
-    });
-
-    return {
-      models,
-      paths
-    };
-  }
-
-  async render(): Promise<RenderContent[]> {
-    const output: RenderContent[];
-    this.$selection().models.forEach(model=>{
-        let content = this.$content(model.$name());
-        // Implement code generation
-        output.push({
-            key: model.$name(),
-            content: content,
-        })
-    });
-    return output;
-  }
-}
-
-// Usage
-UDraft.load("project.yaml").pipeline([new DartClassRenderer()]).exec();
+UDraft.load("project.yaml")
+  .begin("projects/backend/")
+  .pipeline([
+    new TSClassRenderer(),
+    new TSClassValidatorRenderer(),
+    new TSMongooseSchemaRenderer(),
+  ])
+  .exec();
 ```
 
 ## 📁 Sample Output
 
 ```typescript
-// Generated MongoDB Schema
-const PostSchema = new Schema({
+//  Generated MongoDB Schema: project/schemas/social/post-schema.ts
+import { PostStatus } from "../../types/social/post-status";
+import { Post } from "../../entities/social/post";
+
+export const PostSchema = new Schema<Post>({
   title: { type: String, required: true },
   content: { type: String, minLength: 100 },
   status: {
     type: String,
-    enum: ["draft", "published"],
+    enum: PostType,
   },
 });
 
-// Generated TypeScript Interface
-interface Post {
+export const PostModel = mongoose.model<Post>("accounts", PostSchema);
+
+// Generated TypeScript Class with validators: project/entities/social/post.ts
+import { PostStatus } from "../../types/post-status";
+
+export class Post {
+  @IsString()
+  @IsRequired()
+  @IsNotEmpty()
   title: string;
-  content: string;
-  status: "draft" | "published";
+
+  @IsString()
+  @IsOptional()
+  @MaxLength(100)
+  content?: string;
+
+  @IsOptional()
+  @IsEnum(PostStatus)
+  status?: PostStatus;
+}
+
+// Generated TypeScript Enum: project/types/social/post-status.ts
+export enum PostStatus {
+  Draft = "dratf",
+  Publish = "publish",
 }
 ```
 

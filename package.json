@@ -1,6 +1,6 @@
 {
   "name": "@udraft/core",
-  "version": "1.1.1",
+  "version": "1.1.3",
   "license": "MIT",
   "main": "dist/index.js",
   "description": "uDraft is a language and stack agnostic code-generation tool that simplifies full-stack development by converting a single YAML file into code for rapid development.",

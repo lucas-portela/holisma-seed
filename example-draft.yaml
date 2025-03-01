@@ -16,7 +16,7 @@ draft:
         - required(false)
 
     +account(timestamps):
-      /schema: accounts
+      /schema: accountss
       _id[string]:
         - required(false)
       name[string]:
