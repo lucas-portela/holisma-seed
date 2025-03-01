@@ -9,7 +9,7 @@ import path from "path";
 import { UModule } from "../entities/module";
 import { UField } from "../entities/field";
 
-export class TSClassRenderer extends URenderer {
+export default class TSClassRenderer extends URenderer {
   private _entityDir = "src/entities";
   private _dtoDir = "src/dtos";
   private _enumDir = "src/types";

@@ -5,7 +5,7 @@ import { $attr } from "../shortcuts/queries";
 import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
 import { writeToCursor } from "../utils/rendering";
 import { UModule } from "../entities/module";
-import { TSClassRenderer } from "./ts-class-renderer";
+import TSClassRenderer from "./ts-class-renderer";
 import {
   _array,
   _in,
@@ -26,7 +26,7 @@ const KEYS = {
   packageJson: "packageJson",
 };
 
-export class TSClassValidatorRenderer extends URenderer {
+export default class TSClassValidatorRenderer extends URenderer {
   private _classRenderer!: TSClassRenderer;
   private _where?: (module: UModule, model: UModel) => boolean;
 

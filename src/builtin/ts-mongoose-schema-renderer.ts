@@ -5,7 +5,7 @@ import { $attr } from "../shortcuts/queries";
 import { RenderContent, RenderPath, RenderSelection } from "../types/renderer";
 import { closeCursor, writeToCursor } from "../utils/rendering";
 import { UModule } from "../entities/module";
-import { TSClassRenderer } from "./ts-class-renderer";
+import TSClassRenderer from "./ts-class-renderer";
 import {
   _array,
   _in,
@@ -35,7 +35,7 @@ const KEYS = {
   packageJson: "packageJson",
 };
 
-export class TSMongooseSchemaRenderer extends URenderer {
+export default class TSMongooseSchemaRenderer extends URenderer {
   private _classRenderer!: TSClassRenderer;
   private _where?: (module: UModule, model: UModel) => boolean;
   private _schemaDir = "src/schemas";
