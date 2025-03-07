@@ -78,6 +78,12 @@ export class UModule {
     this._features = this._features.concat(features);
     this._features.forEach((feature) => {
       feature.attributes([_rootModule(this)]);
+      const input = feature.$input();
+      const output = feature.$output();
+      if (input && !$attr(input, _rootModule()))
+        input.attributes([_rootModule(this)]);
+      if (output && !$attr(output, _rootModule()))
+        output.attributes([_rootModule(this)]);
     });
     return this;
   }

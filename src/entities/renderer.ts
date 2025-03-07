@@ -46,6 +46,13 @@ export class URenderer {
     return this.$outputs().find((f) => f.key == key) || null;
   }
 
+  $modules(where?: (module: UModule) => boolean) {
+    const modules: UModule[] = this.$seed()
+      .$modules()
+      .filter((mod) => (where ? where(mod) : true));
+    return modules;
+  }
+
   $features(where?: (module: UModule, feature: UFeature) => boolean) {
     const modules = this.$seed().$modules();
     const features: { feature: UFeature; module: UModule }[] = [];

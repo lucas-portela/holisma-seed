@@ -2,7 +2,7 @@ draft:
   /name: Awesome Project
   /description: This is an awesome project.
 
-  account-management:
+  account:
     ~account-roles:
       ADMIN: admin
       READ: read
